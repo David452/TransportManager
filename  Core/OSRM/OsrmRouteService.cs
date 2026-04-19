@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Core.Geocoding;
 
 namespace Core.OSRM;
 
@@ -22,6 +23,18 @@ public class OsrmRouteService : IRouteService
         };
 
         return await GetRouteAsync(waypoints);
+    }
+
+    public async Task<RouteResult> GetRouteAsync(GeoLocation from, GeoLocation to)
+    {
+        var waypoints = new List<GeoLocation> { from, to };
+        return await GetRouteAsync(waypoints);
+    }
+
+    public async Task<RouteResult> GetRouteAsync(List<GeoLocation> waypoints)
+    {
+        var mappedWaypoints = waypoints.Select(l => (l.Latitude, l.Longitude)).ToList();
+        return await GetRouteAsync(mappedWaypoints);
     }
 
     public async Task<RouteResult> GetRouteAsync(List<(double lat, double lon)> waypoints)
