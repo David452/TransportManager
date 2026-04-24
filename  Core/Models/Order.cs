@@ -9,12 +9,13 @@ public enum OrderStatus
     Cancelled, // zrusena
 }
 
-public class Order(string origin, string destination, OrderStatus status = OrderStatus.New, string? note = null)
+public class Order(string origin, string destination, string? note = null)
 {
     public readonly Guid Id = Guid.NewGuid();
     public string Origin { get; set; } = origin;
     public string Destination { get; set; } = destination;
-    public OrderStatus Status { get; } = status;
+    
+    public OrderStatus Status { get; set; } = OrderStatus.New;
     public string? Note { get; set; } = note;
     
 }
