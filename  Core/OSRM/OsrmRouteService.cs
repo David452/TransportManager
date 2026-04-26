@@ -3,6 +3,9 @@ using Core.Geocoding;
 
 namespace Core.OSRM;
 
+/**
+ * OSRM je externé API, ktoré vracia zakódovanú polyline medzi 2 lokáciami
+ */
 public class OsrmRouteService(HttpClient httpClient) : IRouteService
 {
     private const string BaseUrl = "https://router.project-osrm.org";

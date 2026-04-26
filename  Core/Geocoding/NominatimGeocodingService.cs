@@ -4,6 +4,10 @@ using System.Text.Json.Serialization;
 
 namespace Core.Geocoding;
 
+/**
+ * Zadarmo API je obmedzene na 1 req/s
+ * Pretvára query (string) na GeoLocation pomocou externeho API
+ */
 public class NominatimGeocodingService : IGeocodingService
 {
     private readonly HttpClient _httpClient;
