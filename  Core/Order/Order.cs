@@ -1,4 +1,6 @@
-namespace Core.Models;
+using Core.Geocoding;
+
+namespace Core.Order;
 
 public enum OrderStatus
 {
@@ -9,11 +11,11 @@ public enum OrderStatus
     Cancelled, // zrusena
 }
 
-public class Order(string origin, string destination, string? note = null)
+public class Order(GeoLocation origin, GeoLocation destination, string? note = null)
 {
     public readonly Guid Id = Guid.NewGuid();
-    public string Origin { get; set; } = origin;
-    public string Destination { get; set; } = destination;
+    public GeoLocation Origin { get; set; } = origin;
+    public GeoLocation Destination { get; set; } = destination;
     
     public OrderStatus Status { get; set; } = OrderStatus.New;
     public string? Note { get; set; } = note;

@@ -1,4 +1,4 @@
-namespace Core.Models;
+namespace Core.Trip;
 
 public enum TripStatus
 {
@@ -9,11 +9,11 @@ public enum TripStatus
 
 public class Trip(
     DateTime departureDate,
-    List<Order> orders,
+    List<Order.Order> orders,
     TripStatus status = TripStatus.Scheduled
 )
 {
     public DateTime DepartureDate { get; set; } = departureDate;
     public TripStatus Status { get; set; } = status;
-    public List<Order> Orders { get; set; } = orders;
+    public List<Order.Order> Orders { get; set; } = orders;
 }

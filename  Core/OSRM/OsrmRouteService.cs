@@ -3,16 +3,9 @@ using Core.Geocoding;
 
 namespace Core.OSRM;
 
-public class OsrmRouteService : IRouteService
+public class OsrmRouteService(HttpClient httpClient) : IRouteService
 {
-    
-    private readonly HttpClient _httpClient;
     private const string BaseUrl = "https://router.project-osrm.org";
-
-    public OsrmRouteService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
 
     public async Task<RouteResult> GetRouteAsync(double fromLat, double fromLon, double toLat, double toLon)
     {
@@ -42,7 +35,7 @@ public class OsrmRouteService : IRouteService
         var coords = string.Join(";", waypoints.Select(w => FormattableString.Invariant($"{w.lon},{w.lat}")));
 
         var url = $"{BaseUrl}/route/v1/driving/{coords}?overview=full&geometries=polyline";
-        var response = await _httpClient.GetAsync(url);
+        var response = await httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();

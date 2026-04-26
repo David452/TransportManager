@@ -9,16 +9,31 @@ public class NominatimGeocodingService : IGeocodingService
     private readonly HttpClient _httpClient;
     private const string BaseUrl = "https://nominatim.openstreetmap.org/search";
 
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private DateTime _lastRequest = DateTime.MinValue;
+
     public NominatimGeocodingService(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("TransportManager/1.0");
     }
 
-
     public async Task<GeoLocation?> GeocodeAsync(string query)
     {
+        await _semaphore.WaitAsync();
+        try
+        {
+            var elapsed = DateTime.UtcNow - _lastRequest;
+            if (elapsed < TimeSpan.FromSeconds(1))
+                await Task.Delay(TimeSpan.FromSeconds(1) - elapsed);
+
+            _lastRequest = DateTime.UtcNow;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+
         var encoded = Uri.EscapeDataString(query);
         var url = $"{BaseUrl}?q={encoded}&format=json&limit=1";
 
@@ -26,7 +41,7 @@ public class NominatimGeocodingService : IGeocodingService
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
-        var doc = JsonSerializer.Deserialize<List<NominatimResult>>(json) ?? new();
+        var doc = JsonSerializer.Deserialize<List<NominatimResult>>(json) ?? [];
 
         return doc.Select(r => new GeoLocation
         {
@@ -37,12 +52,14 @@ public class NominatimGeocodingService : IGeocodingService
     }
 }
 
-internal class NominatimResult
+internal class NominatimResult(string lat, string lon)
 {
     [JsonPropertyName("lat")]
-    public string Lat  { get; set; }
+    public required string Lat  { get; init; } = lat;
+
     [JsonPropertyName("lon")]
-    public string Lon { get; set; }
+    public required string Lon { get; init; } = lon;
+
     [JsonPropertyName("display_name")]
-    public string DisplayName { get; set; } = String.Empty;
+    public string DisplayName { get; set; } = string.Empty;
 }

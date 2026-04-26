@@ -1,15 +1,15 @@
-using Core.Models;
+using Core.Geocoding;
 using Core.Storage;
 
-namespace Core.Services;
+namespace Core.Order;
 
 
 public class OrderService
 {
-    private readonly IDataStorage<Order> _dataStorage;
-    private List<Order> _orders = new();
+    private readonly IDataStorage<Core.Order.Order> _dataStorage;
+    private List<Core.Order.Order> _orders = new();
 
-    public OrderService(IDataStorage<Order> dataStorage)
+    public OrderService(IDataStorage<Core.Order.Order> dataStorage)
     {
         _dataStorage = dataStorage;
     }
@@ -19,38 +19,38 @@ public class OrderService
         _orders = (await _dataStorage.LoadAsync()).ToList();
     }
 
-    public async Task AddAsync(Order order)
+    public async Task AddAsync(Core.Order.Order order)
     {
         _orders.Add(order);
         await _dataStorage.SaveAsync(_orders);
     }
 
-    public List<Order> GetAll()
+    public List<Core.Order.Order> GetAll()
     {
         return _orders;
     }
 
-    public Order? GetById(Guid id)
+    public Core.Order.Order? GetById(Guid id)
     {
         return _orders.FirstOrDefault(o => o.Id == id);
     }
 
-    public List<Order> GetByDestination(string destination)
+    public List<Core.Order.Order> GetByDestination(GeoLocation destination)
     {
-        return _orders.Where(o => o.Destination == destination).ToList();
+        return _orders.Where(o => o.Destination.DisplayName == destination.DisplayName).ToList();
     }
 
-    public List<Order> GetByOrigin(string origin)
+    public List<Core.Order.Order> GetByOrigin(GeoLocation origin)
     {
-        return _orders.Where(o => o.Origin == origin).ToList();
+        return _orders.Where(o => o.Origin.DisplayName == origin.DisplayName).ToList();
     }
 
-    public List<Order> GetByStatus(OrderStatus status)
+    public List<Core.Order.Order> GetByStatus(OrderStatus status)
     {
         return _orders.Where(o => o.Status == status).ToList();
     }
 
-    public async Task UpdateAsync(Order updated)
+    public async Task UpdateAsync(Core.Order.Order updated)
     {
         var existing = GetById(updated.Id) 
                        ?? throw new KeyNotFoundException($"Order {updated.Id} doesn't exist.");
