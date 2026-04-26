@@ -13,7 +13,7 @@ public enum OrderStatus
 
 public class Order(GeoLocation origin, GeoLocation destination, string? note = null)
 {
-    public readonly Guid Id = Guid.NewGuid();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public GeoLocation Origin { get; set; } = origin;
     public GeoLocation Destination { get; set; } = destination;
     
