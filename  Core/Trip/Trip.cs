@@ -8,12 +8,12 @@ public enum TripStatus
 }
 
 public class Trip(
-    DateTime departureDate,
+    DateOnly departureDate,
     List<Order.Order> orders,
     TripStatus status = TripStatus.Scheduled
 )
 {
-    public DateTime DepartureDate { get; set; } = departureDate;
+    public DateOnly DepartureDate { get; set; } = departureDate;
     public TripStatus Status { get; set; } = status;
     public List<Order.Order> Orders { get; set; } = orders;
 }

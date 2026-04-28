@@ -83,7 +83,7 @@ public static class GeoMath
         return Math.Atan2(y, x);
     }
     
-    private static double HaversineDistanceKm(GeoLocation point1, GeoLocation point2)
+    public static double HaversineDistanceKm(GeoLocation point1, GeoLocation point2)
     {
         var fi1 = point1.Latitude * Math.PI / 180;
         var fi2 = point2.Latitude * Math.PI / 180;

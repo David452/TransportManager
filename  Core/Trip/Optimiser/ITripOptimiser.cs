@@ -2,5 +2,5 @@
 
 public interface ITripOptimiser
 {
-    void Optimise(ref IEnumerable<Order.Order> orders);
+    void Optimise(ref List<Order.Order> orders);
 }
