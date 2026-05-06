@@ -1,10 +1,9 @@
 ﻿using Core.Geocoding;
 using Core.OSRM;
-using Core.Trip.Optimiser;
 
 namespace Core.Trip;
 
-public class TripBuilderService(IRouteService routeService, ITripOptimiser optimiser)
+public class TripBuilderService(IRouteService routeService)
 {
     private List<Order.Order> _orders = [];
 
@@ -16,11 +15,6 @@ public class TripBuilderService(IRouteService routeService, ITripOptimiser optim
     public void RemoveOrder(Guid orderId)
     {
         _orders.RemoveAll(x => x.Id == orderId);
-    }
-
-    public void Optimise()
-    {
-        optimiser.Optimise(ref _orders);
     }
 
     public async Task<IEnumerable<OrderSuggestion>> SuggestNearbyOrderAsync(IEnumerable<Order.Order> candidates, double thresholdKm)
