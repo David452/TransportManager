@@ -12,9 +12,19 @@ public class TripBuilderService(IRouteService routeService)
         _orders.Add(order);
     }
 
+    public void LoadFromTrip(Trip trip)
+    {
+        _orders = [..trip.Orders];
+    }
+
     public void RemoveOrder(Guid orderId)
     {
         _orders.RemoveAll(x => x.Id == orderId);
+    }
+
+    public void SwapOrders(int firstIndex, int secondIndex)
+    {
+        (_orders[firstIndex], _orders[secondIndex]) = (_orders[secondIndex], _orders[firstIndex]);
     }
 
     public async Task<IEnumerable<OrderSuggestion>> SuggestNearbyOrderAsync(IEnumerable<Order.Order> candidates, double thresholdKm)

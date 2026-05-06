@@ -141,7 +141,13 @@ public static class OrderServiceCommands
             order.Status = parseResult.GetValue(statusOption) ?? order.Status;
             order.Note   = parseResult.GetValue(noteOption)   ?? order.Note;
 
-            await service.UpdateAsync(order);
+            await service.UpdateAsync(order.Id, o =>
+            {
+                o.Origin = order.Origin;
+                o.Destination = order.Destination;
+                o.Status = order.Status;
+                o.Note = order.Note;
+            });
         });
         return command;
     }

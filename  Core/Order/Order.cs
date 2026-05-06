@@ -1,4 +1,5 @@
 using Core.Geocoding;
+using Core.Storage;
 
 namespace Core.Order;
 
@@ -12,6 +13,7 @@ public enum OrderStatus
 }
 
 public class Order(GeoLocation origin, GeoLocation destination, string? note = null)
+    : IIdentifiable
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public GeoLocation Origin { get; set; } = origin;
