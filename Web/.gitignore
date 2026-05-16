@@ -1,3 +1,7 @@
+# node and tailwind
+package-lock.json
+wwwroot/css/output.css
+
 # Specific to the EFCore-Blazor sample app
 *.db
 *.db-shm
