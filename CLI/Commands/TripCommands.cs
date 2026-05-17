@@ -43,7 +43,13 @@ public static class TripCommands
             foreach (var id in orderIds)
                 if (orderService.GetById(id) is null) { Console.WriteLine($"Order {id} not found."); return; }
 
-            var trip = new Trip(date, [..orderIds]);
+            var stops = orderIds.SelectMany(id => new TripStop[]
+            {
+                new(id, StopType.Pickup),
+                new(id, StopType.Dropoff)
+            }).ToList();
+            
+            var trip = new Trip(date, stops);
             await tripService.AddAsync(trip);
             foreach (var id in orderIds)
                 await orderService.UpdateAsync(id, o => o.Status = OrderStatus.Assigned);
@@ -73,9 +79,14 @@ public static class TripCommands
 
             PrintTrip(trip);
             Console.WriteLine("Orders:");
-            var orders = ResolveOrders(trip, orderService);
-            foreach (var (order, i) in orders.Select((o, i) => (o, i)))
-                Console.WriteLine($"  [{i}] {order.Id} | {order.Status,-10} | {order.Origin.DisplayName} -> {order.Destination.DisplayName}");
+
+            foreach (var (stop, i) in trip.Stops.Select((s, i) => (s, i)))
+            {
+                var order = orderService.GetById(stop.OrderId);
+                var location = stop.Type == StopType.Pickup ? order?.Origin.DisplayName : order?.Destination.DisplayName;
+                
+                Console.WriteLine($"  [{i}] {stop.Type,-8} | {location} (order {stop.OrderId})");
+            }
         });
         return command;
     }
@@ -155,7 +166,11 @@ public static class TripCommands
             if (orderService.GetById(orderId) is null) { Console.WriteLine($"Order {orderId} not found."); return; }
             if (tripService.GetById(tripId) is null) { Console.WriteLine($"Trip {tripId} not found."); return; }
 
-            await tripService.UpdateAsync(tripId, t => t.OrderIds.Add(orderId));
+            await tripService.UpdateAsync(tripId, t =>
+            {
+                t.Stops.Add(new TripStop(orderId, StopType.Pickup));
+                t.Stops.Add(new TripStop(orderId, StopType.Dropoff));
+            });
             await orderService.UpdateAsync(orderId, o => o.Status = OrderStatus.Assigned);
         });
         return command;
@@ -172,7 +187,7 @@ public static class TripCommands
             var tripId = parseResult.GetRequiredValue(tripIdArg);
             var orderId = parseResult.GetRequiredValue(orderIdArg);
 
-            await tripService.UpdateAsync(tripId, t => t.OrderIds.Remove(orderId));
+            await tripService.UpdateAsync(tripId, t => t.Stops.RemoveAll(s => s.OrderId == orderId));
             await orderService.UpdateAsync(orderId, o => o.Status = OrderStatus.New);
         });
         return command;
@@ -194,14 +209,14 @@ public static class TripCommands
             var trip = tripService.GetById(tripId);
             if (trip is null) { Console.WriteLine("Trip not found."); return; }
 
-            if (first < 0 || second < 0 || first >= trip.OrderIds.Count || second >= trip.OrderIds.Count)
+            if (first < 0 || second < 0 || first >= trip.Stops.Count || second >= trip.Stops.Count)
             {
-                Console.WriteLine($"Invalid index. Trip has {trip.OrderIds.Count} order(s).");
+                Console.WriteLine($"Invalid index. Trip has {trip.Stops.Count} order(s).");
                 return;
             }
 
             await tripService.UpdateAsync(tripId, t =>
-                (t.OrderIds[first], t.OrderIds[second]) = (t.OrderIds[second], t.OrderIds[first]));
+                (t.Stops[first], t.Stops[second]) = (t.Stops[second], t.Stops[first]));
         });
         return command;
     }
@@ -233,5 +248,5 @@ public static class TripCommands
     }
 
     private static void PrintTrip(Trip t) =>
-        Console.WriteLine($"{t.Id} | {t.DepartureDate} | {t.Status,-10} | {t.OrderIds.Count} order(s)");
+        Console.WriteLine($"{t.Id} | {t.DepartureDate} | {t.Status,-10} | {t.Stops.Count / 2} order(s)");
 }

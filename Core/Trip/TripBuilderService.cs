@@ -6,35 +6,42 @@ namespace Core.Trip;
 
 public class TripBuilderService(IRouteService routeService)
 {
-    private List<Order.Order> _orders = [];
+    private List<TripStop> _stops = [];
+    private readonly Dictionary<Guid, Order.Order> _orders = new();
 
     public void AddOrder(Order.Order order)
     {
-        _orders.Add(order);
+        _orders[order.Id] = order;
+        _stops.Add(new TripStop(order.Id, StopType.Pickup));
+        _stops.Add(new TripStop(order.Id, StopType.Dropoff));
     }
 
     public void LoadFromTrip(IEnumerable<Order.Order> orders)
     {
-        _orders = [..orders];
+        foreach (var order in orders)
+        {
+            AddOrder(order);
+        }
+        
     }
 
     public void RemoveOrder(Guid orderId)
     {
-        _orders.RemoveAll(x => x.Id == orderId);
+        _stops.RemoveAll(x => x.OrderId == orderId);
     }
 
-    public void SwapOrders(int firstIndex, int secondIndex)
+    public void SwapStops(int firstIndex, int secondIndex)
     {
-        (_orders[firstIndex], _orders[secondIndex]) = (_orders[secondIndex], _orders[firstIndex]);
+        (_stops[firstIndex], _stops[secondIndex]) = (_stops[secondIndex], _stops[firstIndex]);
     }
 
     public async Task<IEnumerable<OrderSuggestion>> SuggestNearbyOrderAsync(IEnumerable<Order.Order> candidates, double thresholdKm)
     {
         var locations = new List<GeoLocation>();
-        foreach (var order in _orders)
+        foreach (var stop in _stops)
         {
-            locations.Add(order.Origin);
-            locations.Add(order.Destination);
+            var order = _orders[stop.OrderId];
+            locations.Add(stop.Type == StopType.Pickup? order.Origin : order.Destination);
         }
 
         candidates = candidates.Where(o => o.Status == OrderStatus.New); // filtrovanie (mozu iba nove objednavky)
@@ -57,7 +64,7 @@ public class TripBuilderService(IRouteService routeService)
 
     public Trip Build(DateOnly departureDate)
     {
-        return new Trip(departureDate, _orders.Select(o => o.Id).ToList());
+        return new Trip(departureDate, _stops);
     }
     
 }

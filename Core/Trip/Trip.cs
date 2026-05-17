@@ -11,14 +11,14 @@ public enum TripStatus
 
 public class Trip(
     DateOnly departureDate,
-    List<Guid> orderIds,
-    TripStatus status = TripStatus.Scheduled
-) : IIdentifiable
+    List<TripStop> stops,
+    TripStatus status = TripStatus.Scheduled) : IIdentifiable
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public DateOnly DepartureDate { get; set; } = departureDate;
     public TripStatus Status { get; private set; } = status;
-    public List<Guid> OrderIds { get; set; } = orderIds;
+    public List<TripStop> Stops { get; set; } = stops;
+    public IEnumerable<Guid> OrderIds => Stops.Select(s => s.OrderId).Distinct();
 
     public void Start()
     {
