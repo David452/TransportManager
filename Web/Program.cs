@@ -1,6 +1,15 @@
+using Core.Order;
+using Core.Storage;
+using Core.Trip;
 using Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<IDataStorage<Order>>(_ => new JsonDataStorage<Order>("data/orders.json"));
+builder.Services.AddSingleton<OrderService>();
+
+builder.Services.AddSingleton<IDataStorage<Trip>>(_ => new JsonDataStorage<Trip>("data/trips.json"));
+builder.Services.AddSingleton<TripService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

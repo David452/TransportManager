@@ -1,0 +1,31 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<button class="btn p-0 mx-3 border-0 @Class" @onclick="ToggleTheme">
+    <img class="w-8 h-8" src="@ImgSrc" alt="@AltText"/>
+</button>
+
+
+
+@code {
+    [Parameter] public bool IsLight { get; set; }
+    [Parameter] public String Class { get; set; } = "";
+    
+    private IJSObjectReference? _module;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Shared/ThemeToggle.razor.js");
+        }
+    }
+
+    async Task ToggleTheme()
+    {
+        IsLight = !IsLight;
+        await _module!.InvokeVoidAsync("toggle");
+    }
+    private string ImgSrc => (IsLight) ? "/imgs/sun.svg" : "/imgs/moon.svg";
+    private string AltText => (IsLight) ? "light mode" : "dark mode";
+}

@@ -5,6 +5,8 @@
     "tailwindcss": "^4.3.0"
   },
   "scripts": {
-    "dev": "concurrently \"npx tailwindcss -i wwwroot/css/input.css -o wwwroot/css/output.css --watch\" \"dotnet watch\""
+    "dev": "concurrently \"npx tailwindcss -i wwwroot/css/input.css -o wwwroot/css/output.css --watch\" \"dotnet watch\"",
+    "tailwind-once": "npx tailwindcss -i wwwroot/css/input.css -o wwwroot/css/output.css", 
+    "tailwind": "npx tailwindcss -i wwwroot/css/input.css -o wwwroot/css/output.css --watch"
   }
 }
