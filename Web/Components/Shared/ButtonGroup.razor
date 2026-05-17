@@ -1,0 +1,19 @@
+<div class="flex items-center gap-0.5 bg-bg border border-border rounded-full p-1">
+    @foreach (var item in Data)
+    {
+        <button class="px-3 py-1 text-sm font-medium rounded-full @(item.Label == SelectedKey ? ClassSelectedButton : ClassNotSelectedButton)"
+                @onclick="() => OnSelectedKeyChanged.InvokeAsync(item.Label)">
+            @item.Label <span class="font-normal @(item.Label == SelectedKey ? ClassSelectedSpan : "")">@item.Count</span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public required List<(string Label, int Count)> Data { get; set; }
+    [Parameter] public required string SelectedKey { get; set; }
+    [Parameter] public EventCallback<string> OnSelectedKeyChanged { get; set; }
+
+    private const string ClassSelectedButton = "bg-surface shadow-sm text-text";
+    private const string ClassNotSelectedButton = "text-text-muted hover:text-text";
+    private const string ClassSelectedSpan = "text-text-muted";
+}

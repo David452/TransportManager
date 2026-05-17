@@ -1,4 +1,5 @@
 using Core.Order;
+using Core.OSRM;
 using Core.Storage;
 using Core.Trip;
 using Web.Components;
@@ -10,6 +11,8 @@ builder.Services.AddSingleton<OrderService>();
 
 builder.Services.AddSingleton<IDataStorage<Trip>>(_ => new JsonDataStorage<Trip>("data/trips.json"));
 builder.Services.AddSingleton<TripService>();
+
+builder.Services.AddHttpClient<IRouteService, OsrmRouteService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

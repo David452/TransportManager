@@ -1,0 +1,89 @@
+@page "/trips"
+@page "/tripy"
+@rendermode InteractiveServer
+@using Core.Geocoding
+@using Core.Order
+@using Core.OSRM
+@using Core.Trip
+@using Web.Components.Shared
+@using Web.Helpers
+@inject TripService TripService
+@inject OrderService OrderService
+@inject IRouteService RouteService
+
+<PageHeader Title="@Title" Subtitle="@Subtitle">
+    <Tabs>
+        <ButtonGroup Data="@ButtonGroupData" SelectedKey="@_filter.SelectedKey" OnSelectedKeyChanged="@OnFilterChanged"/>
+    </Tabs>
+    <TabsRight>Zobrazených @Filtered.Count z @TripSize</TabsRight>
+</PageHeader>
+
+<div class="flex-1 overflow-auto">
+    @if (Filtered.Count == 0)
+    {
+        <EmptyContainer Title="Žiadne tripy" Description="Pridaj prvý trip tlačidlom vyššie.">
+            <Icon>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-text-faint size-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                </svg>
+            </Icon>
+        </EmptyContainer>
+    }
+    else
+    {
+        
+    }
+
+</div>
+
+@code {
+
+    private readonly StatusFilter<TripStatus, Trip> _filter = new(new Dictionary<string, TripStatus?>
+    {
+        { "Všetky",       null },
+        { "Naplánované",  TripStatus.Scheduled },
+        { "Prebiehajúce", TripStatus.OnGoing },
+        { "Dokončené",    TripStatus.Completed },
+    });
+
+    private List<Trip> Filtered => _filter.GetFiltered(TripService.GetAll, TripService.GetByStatus);
+    private List<(string Label, int Count)> ButtonGroupData => _filter.GetButtonGroupData(TripService.GetAll, TripService.GetByStatus);
+
+    private string Title = "Tripy";
+    private string Subtitle => TripSize == 0
+        ? ""
+        : $"{TripService.GetByStatus(TripStatus.Completed).Count} dokončených tripov • spolu {_totalDistanceKm} km";
+    private int TripSize => TripService.GetAll().Count;
+    private int _totalDistanceKm;
+
+    private void OnFilterChanged(string key) => _filter.Select(key);
+
+    private async Task<int> GetTotalCompletedDistanceKm()
+    {
+        int total = 0;
+        foreach (var trip in TripService.GetByStatus(TripStatus.Completed))
+        {
+            List<GeoLocation> stops = [];
+            foreach (var stop in trip.Stops)
+            {
+                var order = OrderService.GetById(stop.OrderId);
+                var location = stop.Type == StopType.Pickup ? order?.Origin : order?.Destination;
+                if (location is not null)
+                    stops.Add(new GeoLocation { Latitude = location.Latitude, Longitude = location.Longitude });
+            }
+            if (stops.Count >= 2)
+                total += (int)(await RouteService.GetRouteAsync(stops)).DistanceKm;
+        }
+        return total;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(
+            OrderService.LoadAsync(),
+            TripService.LoadAsync()
+        );
+        _totalDistanceKm = await GetTotalCompletedDistanceKm();
+    }
+
+}

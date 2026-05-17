@@ -1,0 +1,79 @@
+@page "/zakazky"
+@page "/orders"
+@rendermode InteractiveServer
+@using Core.Order
+@using Web.Components.Shared
+@using Web.Helpers
+@inject OrderService OrderService
+
+<PageHeader
+    Title="@Title"
+    Subtitle="@Subtitle">
+    <Actions>
+        <div class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                 class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-faint pointer-events-none">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+            <input type="text" placeholder="Hľadať zákazku, zákazníka, me…"
+                   class="input pl-9 w-72 text-sm" disabled />
+        </div>
+        <button class="btn btn-primary gap-1.5" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Nová zákazka
+        </button>
+    </Actions>
+    <Tabs>
+        <ButtonGroup Data="@ButtonGroupData" SelectedKey="@_filter.SelectedKey" OnSelectedKeyChanged="@OnFilterChanged"/>
+    </Tabs>
+    <TabsRight>Zobrazených @Filtered.Count z @OrderSize</TabsRight>
+</PageHeader>
+
+<div class="flex-1 overflow-auto">
+    @if (Filtered.Count == 0)
+    {
+        <EmptyContainer Title="Žiadne zákazky" Description="Pridaj prvú zákazku tlačidlom vyššie.">
+            <Icon>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-6 text-text-faint">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+            </Icon>
+        </EmptyContainer>
+    }
+    else
+    {
+        @* Tu príde tabuľka zákaziek *@
+    }
+    
+</div>
+@code {
+    private readonly StatusFilter<OrderStatus, Order> _filter = new(new Dictionary<string, OrderStatus?>
+    {
+        { "Všetky",   null },
+        { "Nové",     OrderStatus.New },
+        { "Zaradené", OrderStatus.Assigned },
+        { "Na ceste", OrderStatus.EnRoute },
+        { "Doručené", OrderStatus.Delivered },
+        { "Zrušené",  OrderStatus.Cancelled },
+    });
+
+    private List<Order> Filtered => _filter.GetFiltered(OrderService.GetAll, OrderService.GetByStatus);
+    private List<(string Label, int Count)> ButtonGroupData => _filter.GetButtonGroupData(OrderService.GetAll, OrderService.GetByStatus);
+
+    private string Title = "Zákazky";
+    private string Subtitle => NewOrderSize == 0
+        ? ""
+        : $"{NewOrderSize} nových zákaziek čaká na zaradenie do tripu";
+
+    private int OrderSize => OrderService.GetAll().Count;
+    private int NewOrderSize => OrderService.GetByStatus(OrderStatus.New).Count;
+
+    private void OnFilterChanged(string key) => _filter.Select(key);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await OrderService.LoadAsync();
+    }
+}

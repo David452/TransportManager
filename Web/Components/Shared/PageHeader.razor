@@ -1,0 +1,45 @@
+<div class="w-full border-b border-border bg-surface px-6 pt-5 pb-0">
+
+    <!-- Riadok 1: nadpis + akcie -->
+    <div class="flex items-start justify-between gap-4 pb-4">
+        <div>
+            <h1 class="text-xl font-bold text-text leading-tight">@Title</h1>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <p class="text-sm text-text-muted mt-0.5">@Subtitle</p>
+            }
+        </div>
+
+        @if (Actions is not null)
+        {
+            <div class="flex items-center gap-2 shrink-0">
+                @Actions
+            </div>
+        }
+    </div>
+
+    <!-- Riadok 2: tabs + info vpravo -->
+    @if (Tabs is not null)
+    {
+        <div class="flex items-center justify-between border-t border-border py-2">
+            <div class="flex items-center gap-1">
+                @Tabs
+            </div>
+            @if (TabsRight is not null)
+            {
+                <div class="text-sm text-text-muted pb-3">
+                    @TabsRight
+                </div>
+            }
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter] public required string Title { get; set; }
+    [Parameter] public string Subtitle { get; set; } = "";
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public RenderFragment? Tabs { get; set; }
+    [Parameter] public RenderFragment? TabsRight { get; set; }
+}

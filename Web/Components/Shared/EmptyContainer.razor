@@ -1,0 +1,15 @@
+<div class="flex flex-col items-center justify-center h-full py-32 gap-3">
+    <div class="w-16 h-16 rounded-lg bg-surface-2 border border-border flex items-center justify-center">
+        @Icon
+    </div>
+
+    <div class="text-center">
+        <p class="font-semibold text-text">@Title</p>
+        <p class="text-sm text-text-muted mt-1">@Description</p>
+    </div>
+</div>
+@code {
+    [Parameter] public required string Title { get; set; }
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public required RenderFragment Icon { get; set; }
+}
