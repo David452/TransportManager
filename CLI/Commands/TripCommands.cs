@@ -85,7 +85,7 @@ public static class TripCommands
                 var order = orderService.GetById(stop.OrderId);
                 var location = stop.Type == StopType.Pickup ? order?.Origin.DisplayName : order?.Destination.DisplayName;
                 
-                Console.WriteLine($"  [{i}] {stop.Type,-8} | {location} (order {stop.OrderId})");
+                Console.WriteLine($"  [{i}] {stop.Type,-8} | {location} (order {stop.OrderId}) | customer: {order?.CustomerId?.ToString() ?? "-"}");
             }
         });
         return command;

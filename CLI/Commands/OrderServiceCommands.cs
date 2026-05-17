@@ -156,5 +156,5 @@ public static class OrderServiceCommands
         orders.ForEach(PrintOrder);
 
     private static void PrintOrder(Order o) =>
-        Console.WriteLine($"{o.Id} | {o.Status,-10} | {o.Origin.DisplayName} -> {o.Destination.DisplayName}{(o.Note is null ? "" : $" ({o.Note})")}");
+        Console.WriteLine($"{o.Id} | {o.Status,-10} | {o.Origin.DisplayName} -> {o.Destination.DisplayName}{(o.Note is null ? "" : $" ({o.Note})")} | customer: {o.CustomerId?.ToString() ?? "-"}");
 }
