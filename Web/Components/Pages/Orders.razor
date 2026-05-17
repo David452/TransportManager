@@ -1,6 +1,7 @@
 @page "/zakazky"
 @page "/orders"
 @rendermode InteractiveServer
+@using System.Diagnostics
 @using Core.Customer
 @using Core.Order
 @using Web.Components.Shared
@@ -118,6 +119,7 @@
     private string GetCustomerName(Guid? customerId)
     {
         if (customerId is null) return "---";
+
         var customer = CustomerService.GetById(customerId.Value);
         if (customer is null) return "---";
         return customer.CompanyName ?? $"{customer.FirstName} {customer.LastName}";
@@ -135,6 +137,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await OrderService.LoadAsync();
+        await Task.WhenAll(
+            OrderService.LoadAsync(),
+            CustomerService.LoadAsync()
+        );
     }
 }

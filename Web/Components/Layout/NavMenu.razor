@@ -19,8 +19,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await OrderService.LoadAsync();
-        await TripService.LoadAsync();
+        await Task.WhenAll(
+            OrderService.LoadAsync(),
+            TripService.LoadAsync(),
+            CustomerService.LoadAsync()
+        );
     }
 
 }
