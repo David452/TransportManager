@@ -1,9 +1,11 @@
+@using Core.Customer
 @using Core.Order
 @using Core.Trip
 @using Web.Components.Shared
 @inject NavigationManager Nav
 @inject OrderService OrderService
 @inject TripService TripService
+@inject CustomerService CustomerService
 
 @code {
     string Current => Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].ToLower();
@@ -76,7 +78,10 @@
         </svg>
 
         <span class="flex-1">Zákazníci</span>
-        @* TODO: Zakaznici count *@
+        @if (CustomerService.GetAll().Count != 0)
+        {
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-surface-2 text-text-muted border border-border">@CustomerService.GetAll().Count</span>
+        }
     </a>
 
 </nav>

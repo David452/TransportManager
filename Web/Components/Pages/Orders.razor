@@ -1,10 +1,12 @@
 @page "/zakazky"
 @page "/orders"
 @rendermode InteractiveServer
+@using Core.Customer
 @using Core.Order
 @using Web.Components.Shared
 @using Web.Helpers
 @inject OrderService OrderService
+@inject CustomerService CustomerService
 
 <PageHeader
     Title="@Title"
@@ -44,7 +46,48 @@
     }
     else
     {
-        @* Tu príde tabuľka zákaziek *@
+        <div class="m-4 rounded-lg border border-border bg-surface overflow-hidden">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-border">
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Zákazník</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Trasa</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Hmotnosť</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Stav</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Poznámka</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-text-muted uppercase tracking-wider">Akcia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Filtered.OrderBy(i => i.Status))
+                {
+                    <tr class="border-b border-border border-l-4 @(item.Status == OrderStatus.New? "border-l-accent" : "")">
+
+                        <td class="px-4 py-4 text-sm font-semibold text-text">@GetCustomerName(item.CustomerId)</td>
+                        <td class="px-4 py-4 text-sm text-text">@item.Origin.DisplayName.Split(',').Skip(1).FirstOrDefault() → @item.Destination.DisplayName.Split(',').Skip(1).FirstOrDefault()</td>
+                        <td class="px-4 py-4 text-sm text-text-muted">14 t</td>
+                        <td class="px-4 py-4">
+                            @{ var badge = GetStatusBadge(item.Status); }
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium rounded-md px-2 @badge.Classes">
+                                <span class="size-1.5 rounded-full @badge.Dot"></span>
+                                @badge.Label
+                            </span>
+                        </td>
+                        <td class="px-4 py-4 text-sm text-text-muted max-w-48 truncate">@(item.Note ?? "---")</td>
+                        <td class="px-4 py-4 text-right">
+                            @if (item.Status == OrderStatus.New)
+                            {
+                                <button class="btn text-sm text-accent border-accent gap-1 px-3" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                    Do tripu
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
     }
     
 </div>
@@ -71,6 +114,24 @@
     private int NewOrderSize => OrderService.GetByStatus(OrderStatus.New).Count;
 
     private void OnFilterChanged(string key) => _filter.Select(key);
+
+    private string GetCustomerName(Guid? customerId)
+    {
+        if (customerId is null) return "---";
+        var customer = CustomerService.GetById(customerId.Value);
+        if (customer is null) return "---";
+        return customer.CompanyName ?? $"{customer.FirstName} {customer.LastName}";
+    }
+
+    private static (string Classes, string Dot, string Label) GetStatusBadge(OrderStatus status) => status switch
+    {
+        OrderStatus.New       => ("text-state-new bg-state-new-bg", "bg-state-new", "nová"),
+        OrderStatus.Assigned  => ("text-state-scheduled bg-state-scheduled-bg", "bg-state-scheduled", "zaradená"),
+        OrderStatus.EnRoute   => ("text-state-ontrip bg-state-ontrip-bg", "bg-state-ontrip", "na ceste"),
+        OrderStatus.Delivered => ("text-state-delivered bg-state-delivered-bg", "bg-state-delivered", "doručená"),
+        OrderStatus.Cancelled => ("text-state-cancelled bg-state-cancelled-bg", "bg-state-cancelled", "zrušená"),
+        _                     => ("text-text-muted bg-bg", "bg-text-muted", "neznámy"),
+    };
 
     protected override async Task OnInitializedAsync()
     {

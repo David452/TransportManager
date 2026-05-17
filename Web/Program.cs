@@ -1,3 +1,4 @@
+using Core.Customer;
 using Core.Order;
 using Core.OSRM;
 using Core.Storage;
@@ -11,6 +12,9 @@ builder.Services.AddSingleton<OrderService>();
 
 builder.Services.AddSingleton<IDataStorage<Trip>>(_ => new JsonDataStorage<Trip>("data/trips.json"));
 builder.Services.AddSingleton<TripService>();
+
+builder.Services.AddSingleton<IDataStorage<Customer>>(_ => new JsonDataStorage<Customer>("data/customers.json"));
+builder.Services.AddSingleton<CustomerService>();
 
 builder.Services.AddHttpClient<IRouteService, OsrmRouteService>();
 
