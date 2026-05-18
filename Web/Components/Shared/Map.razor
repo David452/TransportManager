@@ -1,0 +1,35 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div id="@_mapId" style="height: @Height; width: 100%; border-radius: 0.5rem;"></div>
+
+@code {
+    [Parameter] public string Height { get; set; } = "400px";
+    [Parameter] public bool Interactive { get; set; } = true;
+
+    private readonly string _mapId = $"map-{Guid.NewGuid():N}";
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initMap", _mapId, Interactive);
+            _initialized = true;
+        }
+    }
+
+    public async Task ShowRoute(double[] originCords, double[] destinationCords,
+        string originLabel, string destinationLabel,
+        IEnumerable<double[]> polylinePoints)
+    {
+        if (!_initialized) return;
+        await JS.InvokeVoidAsync("showRoute", _mapId, polylinePoints, originLabel, destinationLabel);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await JS.InvokeVoidAsync("eval", $"delete window.mapInstances['{_mapId}']");
+    }
+
+}
