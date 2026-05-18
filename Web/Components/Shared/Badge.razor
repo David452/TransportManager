@@ -1,0 +1,26 @@
+@{ var badge = GetStatusBadge(); }
+<span class="inline-flex items-center gap-1.5 text-sm font-medium rounded-md px-2 @badge.Classes">
+    @if (Icon is null)
+    {
+        <span class="size-1.5 rounded-full @badge.Dot"></span>
+    }
+    else
+    {
+        @Icon
+    }
+    @Label
+</span>
+
+@code {
+    [Parameter] public required string Label { get; set; }
+    [Parameter] public required string HighlightClass { get; set; }
+    [Parameter] public RenderFragment? Icon { get; set; }
+
+    private (string Classes, string Dot, string Label) GetStatusBadge()
+    {
+        return (
+            $"text-state-{HighlightClass} bg-state-{HighlightClass}-bg", 
+            $"bg-state-{HighlightClass}",
+            Label);
+    }
+}

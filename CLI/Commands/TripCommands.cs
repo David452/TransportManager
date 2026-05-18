@@ -83,7 +83,7 @@ public static class TripCommands
             foreach (var (stop, i) in trip.Stops.Select((s, i) => (s, i)))
             {
                 var order = orderService.GetById(stop.OrderId);
-                var location = stop.Type == StopType.Pickup ? order?.Origin.DisplayName : order?.Destination.DisplayName;
+                var location = stop.Type == StopType.Pickup ? order?.Origin.FullAddress : order?.Destination.FullAddress;
                 
                 Console.WriteLine($"  [{i}] {stop.Type,-8} | {location} (order {stop.OrderId}) | customer: {order?.CustomerId?.ToString() ?? "-"}");
             }
@@ -242,7 +242,7 @@ public static class TripCommands
             var suggestions = await builder.SuggestNearbyOrderAsync(candidates, threshold);
 
             foreach (var s in suggestions)
-                Console.WriteLine($"{s.Order.Id} | {s.Order.Origin.DisplayName} -> {s.Order.Destination.DisplayName} | {s.DistanceFromRouteKm:F1} km from route");
+                Console.WriteLine($"{s.Order.Id} | {s.Order.Origin.FullAddress} -> {s.Order.Destination.FullAddress} | {s.DistanceFromRouteKm:F1} km from route");
         });
         return command;
     }

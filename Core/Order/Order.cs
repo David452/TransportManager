@@ -21,6 +21,7 @@ public class Order(GeoLocation origin, GeoLocation destination, string? note = n
     
     public OrderStatus Status { get; set; } = OrderStatus.New;
     public string? Note { get; set; } = note;
-    
+    public double WeightTons { get; set; } = 0.1;
+
     public Guid? CustomerId { get; set; }
 }

@@ -1,7 +1,6 @@
 @page "/zakazky"
 @page "/orders"
 @rendermode InteractiveServer
-@using System.Diagnostics
 @using Core.Customer
 @using Core.Order
 @using Web.Components.Shared
@@ -18,10 +17,10 @@
                  class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-faint pointer-events-none">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
             </svg>
-            <input type="text" placeholder="Hľadať zákazku, zákazníka, me…"
-                   class="input pl-9 w-72 text-sm" disabled />
+            <input type="text" placeholder="Hľadať zákazku, zákazníka, miesto…"
+                   class="input pl-9 w-72 text-sm" @bind="_searchQuery" @bind:event="oninput"/>
         </div>
-        <button class="btn btn-primary gap-1.5" disabled>
+        <button class="btn btn-primary gap-1.5" @onclick="() => _showAddModal = true">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
@@ -51,6 +50,7 @@
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-border">
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">ID</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Zákazník</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Trasa</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Hmotnosť</th>
@@ -62,17 +62,17 @@
                 <tbody>
                 @foreach (var item in Filtered.OrderBy(i => i.Status))
                 {
-                    <tr class="border-b border-border border-l-4 @(item.Status == OrderStatus.New? "border-l-accent" : "")">
+                    var row = item;
+                    <tr class="border-b border-border border-l-4 @(item.Status == OrderStatus.New? "border-l-accent" : "") cursor-pointer hover:bg-surface-hover transition-colors"
+                        @onclick="() => _editingOrder = row">
 
+                        <td class="px-4 py-4 text-sm font-semibold text-accent">Z-@item.Id.ToString()[..4].ToUpper()</td>
                         <td class="px-4 py-4 text-sm font-semibold text-text">@GetCustomerName(item.CustomerId)</td>
-                        <td class="px-4 py-4 text-sm text-text">@item.Origin.DisplayName.Split(',').Skip(1).FirstOrDefault() → @item.Destination.DisplayName.Split(',').Skip(1).FirstOrDefault()</td>
-                        <td class="px-4 py-4 text-sm text-text-muted">14 t</td>
+                        <td class="px-4 py-4 text-sm text-text">@item.Origin.DisplayName → @item.Destination.DisplayName</td>
+                        <td class="px-4 py-4 text-sm text-text-muted">@item.WeightTons t</td>
                         <td class="px-4 py-4">
                             @{ var badge = GetStatusBadge(item.Status); }
-                            <span class="inline-flex items-center gap-1.5 text-sm font-medium rounded-md px-2 @badge.Classes">
-                                <span class="size-1.5 rounded-full @badge.Dot"></span>
-                                @badge.Label
-                            </span>
+                            <Badge Label="@badge.Label" HighlightClass="@badge.HighLightClass"/>
                         </td>
                         <td class="px-4 py-4 text-sm text-text-muted max-w-48 truncate">@(item.Note ?? "---")</td>
                         <td class="px-4 py-4 text-right">
@@ -90,9 +90,22 @@
             </table>
         </div>
     }
-    
+
 </div>
+
+<OrderFormModal Visible="_showAddModal || _editingOrder is not null"
+                EditingOrder="_editingOrder"
+                OnClose="CloseModal"
+                OnSaved="StateHasChanged"
+                OnDeleted="StateHasChanged"/>
+
 @code {
+    private bool _showAddModal;
+    private Order? _editingOrder;
+    private string _searchQuery = "";
+
+    private void CloseModal() { _showAddModal = false; _editingOrder = null; }
+
     private readonly StatusFilter<OrderStatus, Order> _filter = new(new Dictionary<string, OrderStatus?>
     {
         { "Všetky",   null },
@@ -103,7 +116,14 @@
         { "Zrušené",  OrderStatus.Cancelled },
     });
 
-    private List<Order> Filtered => _filter.GetFiltered(OrderService.GetAll, OrderService.GetByStatus);
+    private List<Order> Filtered => _filter.GetFiltered(OrderService.GetAll, OrderService.GetByStatus)
+        .Where(o => string.IsNullOrWhiteSpace(_searchQuery) ||
+            o.Id.ToString()[..4].Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            o.Origin.FullAddress.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            o.Destination.FullAddress.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            (o.Note?.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            GetCustomerName(o.CustomerId).Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
+        .ToList();
     private List<(string Label, int Count)> ButtonGroupData => _filter.GetButtonGroupData(OrderService.GetAll, OrderService.GetByStatus);
 
     private string Title = "Zákazky";
@@ -125,14 +145,14 @@
         return customer.CompanyName ?? $"{customer.FirstName} {customer.LastName}";
     }
 
-    private static (string Classes, string Dot, string Label) GetStatusBadge(OrderStatus status) => status switch
+    private static (string HighLightClass, string Label) GetStatusBadge(OrderStatus status) => status switch
     {
-        OrderStatus.New       => ("text-state-new bg-state-new-bg", "bg-state-new", "nová"),
-        OrderStatus.Assigned  => ("text-state-scheduled bg-state-scheduled-bg", "bg-state-scheduled", "zaradená"),
-        OrderStatus.EnRoute   => ("text-state-ontrip bg-state-ontrip-bg", "bg-state-ontrip", "na ceste"),
-        OrderStatus.Delivered => ("text-state-delivered bg-state-delivered-bg", "bg-state-delivered", "doručená"),
-        OrderStatus.Cancelled => ("text-state-cancelled bg-state-cancelled-bg", "bg-state-cancelled", "zrušená"),
-        _                     => ("text-text-muted bg-bg", "bg-text-muted", "neznámy"),
+        OrderStatus.New       => ("new", "nová"),
+        OrderStatus.Assigned  => ("scheduled", "zaradená"),
+        OrderStatus.EnRoute   => ("ontrip", "na ceste"),
+        OrderStatus.Delivered => ("delivered", "doručená"),
+        OrderStatus.Cancelled => ("cancelled", "zrušená"),
+        _                     => ("muted", "neznámy"),
     };
 
     protected override async Task OnInitializedAsync()

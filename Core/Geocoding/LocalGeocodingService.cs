@@ -26,7 +26,7 @@ public class LocalGeocodingService : IGeocodingService
     public Task<GeoLocation?> GeocodeAsync(string query)
     {
         var result = _locations.FirstOrDefault(l =>
-            l.DisplayName.Equals(query, StringComparison.OrdinalIgnoreCase));
+            l.FullAddress.Equals(query, StringComparison.OrdinalIgnoreCase));
         if (result is not null)
         {
             return Task.FromResult<GeoLocation?>(result);
@@ -36,7 +36,7 @@ public class LocalGeocodingService : IGeocodingService
         
         result = _locations.FirstOrDefault(l =>
             words.All(word =>
-                l.DisplayName.Contains(word, StringComparison.OrdinalIgnoreCase)));
+                l.FullAddress.Contains(word, StringComparison.OrdinalIgnoreCase)));
         
         return Task.FromResult(result);
     }

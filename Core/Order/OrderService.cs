@@ -9,16 +9,21 @@ public class OrderService(IDataStorage<Order> dataStorage) : DataService<Order>(
 
     public List<Order> GetByDestination(GeoLocation destination)
     {
-        return Items.Where(o => o.Destination.DisplayName == destination.DisplayName).ToList();
+        return Items.Where(o => o.Destination.FullAddress == destination.FullAddress).ToList();
     }
 
     public List<Order> GetByOrigin(GeoLocation origin)
     {
-        return Items.Where(o => o.Origin.DisplayName == origin.DisplayName).ToList();
+        return Items.Where(o => o.Origin.FullAddress == origin.FullAddress).ToList();
     }
 
     public List<Order> GetByStatus(OrderStatus status)
     {
         return Items.Where(o => o.Status == status).ToList();
+    }
+
+    public List<Order> GetByCustomerId(Guid customerId)
+    {
+        return Items.Where(o => o.CustomerId == customerId).ToList();
     }
 }

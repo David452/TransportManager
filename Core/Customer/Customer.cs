@@ -17,4 +17,6 @@ public class Customer : IIdentifiable
     
     public GeoLocation? DefaultPickupLocation { get; set; }
     public GeoLocation? DefaultDeliveryLocation { get; set; }
+    
+    public string FullName =>  $"{FirstName} {LastName}";
 }

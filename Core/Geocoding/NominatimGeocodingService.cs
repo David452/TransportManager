@@ -39,7 +39,7 @@ public class NominatimGeocodingService : IGeocodingService
         }
 
         var encoded = Uri.EscapeDataString(query);
-        var url = $"{BaseUrl}?q={encoded}&format=json&limit=1";
+        var url = $"{BaseUrl}?q={encoded}&format=json&limit=1&countrycodes=sk,cz";
 
         var response = await _httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
@@ -51,7 +51,7 @@ public class NominatimGeocodingService : IGeocodingService
         {
             Latitude = double.Parse(r.Lat, CultureInfo.InvariantCulture),
             Longitude = double.Parse(r.Lon, CultureInfo.InvariantCulture),
-            DisplayName = r.DisplayName,
+            FullAddress = r.DisplayName,
         }).FirstOrDefault();
     }
 }

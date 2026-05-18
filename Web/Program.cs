@@ -1,4 +1,5 @@
 using Core.Customer;
+using Core.Geocoding;
 using Core.Order;
 using Core.OSRM;
 using Core.Storage;
@@ -17,6 +18,7 @@ builder.Services.AddSingleton<IDataStorage<Customer>>(_ => new JsonDataStorage<C
 builder.Services.AddSingleton<CustomerService>();
 
 builder.Services.AddHttpClient<IRouteService, OsrmRouteService>();
+builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

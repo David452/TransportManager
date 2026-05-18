@@ -1,0 +1,15 @@
+<div class="card p-4 flex flex-col gap-1 @(Highlight ? "bg-accent-faint border-accent-soft" : "")">
+    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">@Label</div>
+    <div class="text-3xl font-bold @(Highlight ? "text-accent" : "text-text")">@Value</div>
+    @if (Subtitle is not null)
+    {
+        <div class="text-xs text-text-faint">@Subtitle</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = null!;
+    [Parameter, EditorRequired] public string Value { get; set; } = null!;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public bool Highlight { get; set; }
+}

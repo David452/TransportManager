@@ -1,0 +1,329 @@
+@using Core.Customer
+@using Core.Geocoding
+@inject CustomerService CustomerService
+@inject IGeocodingService GeocodingService
+
+@if (Visible)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @onclick="Close"></div>
+        <div class="relative z-10 bg-surface border border-border rounded-xl shadow-lg w-full max-w-xl mx-4 flex flex-col max-h-[90vh]">
+            
+            <div class="flex items-center gap-4 px-6 py-5 border-b border-border flex-shrink-0">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 @(HasName ? "bg-accent-soft" : "bg-amber-100")">
+                    @if (HasName)
+                    {
+                        <span class="text-sm font-semibold text-accent">@Initials</span>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5 text-amber-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/>
+                        </svg>
+                    }
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">@(EditingCustomer is null ? "Nový zákazník" : "Upraviť zákazníka")</div>
+                    <div class="text-base font-bold text-text truncate">@(HasName ? $"{_firstName} {_lastName}".Trim() : "Bez mena")</div>
+                </div>
+                <button class="text-text-faint hover:text-text transition-colors" @onclick="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+
+            <div class="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-6">
+
+
+                <div class="flex flex-col gap-2">
+                    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Typ zákazníka</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button class="flex items-center gap-3 p-3 rounded-lg border transition-colors @(_isCompany ? "border-accent bg-accent-faint" : "border-border bg-surface hover:bg-surface-hover")"
+                                @onclick="() => _isCompany = true">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 @(_isCompany ? "text-accent" : "text-text-muted") flex-shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                            </svg>
+                            <div class="text-left">
+                                <div class="text-sm font-semibold @(_isCompany ? "text-accent" : "text-text")">Firma</div>
+                                <div class="text-xs text-text-muted">IČO, DIČ, fakturácia</div>
+                            </div>
+                        </button>
+                        <button class="flex items-center gap-3 p-3 rounded-lg border transition-colors @(!_isCompany ? "border-accent bg-accent-faint" : "border-border bg-surface hover:bg-surface-hover")"
+                                @onclick="() => _isCompany = false">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 @(!_isCompany ? "text-accent" : "text-text-muted") flex-shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                            </svg>
+                            <div class="text-left">
+                                <div class="text-sm font-semibold @(!_isCompany ? "text-accent" : "text-text")">Fyzická osoba</div>
+                                <div class="text-xs text-text-muted">len kontaktné údaje</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="flex flex-col gap-3">
+                    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Identita</div>
+                    @if (_isCompany)
+                    {
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Názov firmy <span class="text-red-400">*</span></label>
+                            <input class="input w-full" placeholder="Napr. Drevoexport s.r.o." @bind="_companyName" @bind:event="oninput"/>
+                        </div>
+                    }
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Meno <span class="text-red-400">*</span></label>
+                            <input class="input w-full" placeholder="Tomáš" @bind="_firstName" @bind:event="oninput"/>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Priezvisko <span class="text-red-400">*</span></label>
+                            <input class="input w-full" placeholder="Drevec" @bind="_lastName" @bind:event="oninput"/>
+                        </div>
+                    </div>
+                    @if (_isCompany)
+                    {
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-text-muted uppercase tracking-wide">IČO <span class="text-red-400">*</span></label>
+                                <input class="input w-full" placeholder="12345678" @bind="_ico" @bind:event="oninput"/>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs font-medium text-text-muted uppercase tracking-wide">DIČ <span class="text-red-400">*</span></label>
+                                <input class="input w-full" placeholder="SK2012345678" @bind="_dic" @bind:event="oninput"/>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+
+                <div class="flex flex-col gap-3">
+                    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Kontakt</div>
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-text-muted uppercase tracking-wide">E-mail</label>
+                            <span class="text-xs text-text-faint">voliteľné</span>
+                        </div>
+                        <div class="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                 class="size-4 text-text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                            </svg>
+                            <input class="input w-full pl-9" placeholder="obchod@firma.sk" type="email" @bind="_email" @bind:event="oninput"/>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Telefón <span class="text-red-400">*</span></label>
+                        <div class="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                 class="size-4 text-text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 6.75Z"/>
+                            </svg>
+                            <input class="input w-full pl-9" placeholder="+421 905 000 000" type="tel" @bind="_phone" @bind:event="oninput"/>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="flex flex-col gap-3">
+                    <div>
+                        <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Predvolená trasa</div>
+                        <div class="text-xs text-text-faint mt-0.5">Pri novej zákazke sa tieto miesta predvyplnia. Možno ich kedykoľvek prepísať.</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Predvolená nakládka</label>
+                                <span class="text-xs text-text-faint">voliteľné</span>
+                            </div>
+                            <div class="relative">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                     class="size-4 text-text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                </svg>
+                                <input class="input w-full pl-9" placeholder="1057/4, Liesek, Vedľajšia" @bind="_pickupLocation" @bind:event="oninput"/>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Predvolená vykládka</label>
+                                <span class="text-xs text-text-faint">voliteľné</span>
+                            </div>
+                            <div class="relative">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                     class="size-4 text-text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                </svg>
+                                <input class="input w-full pl-9" placeholder="321/4, Trstená, 027 01" @bind="_deliveryLocation" @bind:event="oninput"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="flex items-center gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+                @if (EditingCustomer is not null)
+                {
+                    @if (_confirmDelete)
+                    {
+                        <span class="text-sm text-text-muted mr-auto">Naozaj odstrániť zákazníka?</span>
+                        <button class="btn" @onclick="() => _confirmDelete = false">Nie</button>
+                        <button class="btn text-red-500 border-red-200 hover:bg-red-50" @onclick="Delete">Áno, odstrániť</button>
+                    }
+                    else
+                    {
+                        <button class="btn text-red-500 border-red-200 hover:bg-red-50 mr-auto" @onclick="() => _confirmDelete = true">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                            </svg>
+                            Odstrániť
+                        </button>
+                        @if (IsDirty)
+                        {
+                            <span class="text-sm text-text-faint">Neuložené zmeny</span>
+                        }
+                        <button class="btn" @onclick="Close">Zrušiť</button>
+                        <button class="btn btn-primary" @onclick="Submit" disabled="@(!IsValid)">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                            </svg>
+                            Uložiť zmeny
+                        </button>
+                    }
+                }
+                else
+                {
+                    @if (IsDirty)
+                    {
+                        <span class="text-sm text-text-faint mr-auto">Neuložené zmeny</span>
+                    }
+                    <button class="btn" @onclick="Close">Zrušiť</button>
+                    <button class="btn btn-primary" @onclick="Submit" disabled="@(!IsValid)">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                        </svg>
+                        Vytvoriť zákazníka
+                    </button>
+                }
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public bool Visible { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnDeleted { get; set; }
+    [Parameter] public Customer? EditingCustomer { get; set; }
+
+    private bool _confirmDelete;
+
+    private bool _isCompany = true;
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _companyName = "";
+    private string _ico = "";
+    private string _dic = "";
+    private string _email = "";
+    private string _phone = "";
+    private string _pickupLocation = "";
+    private string _deliveryLocation = "";
+
+    private bool HasName => !string.IsNullOrWhiteSpace(_firstName) || !string.IsNullOrWhiteSpace(_lastName);
+    private string Initials => $"{_firstName.FirstOrDefault()}{_lastName.FirstOrDefault()}".ToUpper().Trim();
+    private bool IsDirty => HasName || !string.IsNullOrWhiteSpace(_phone) || !string.IsNullOrWhiteSpace(_email)
+                            || !string.IsNullOrWhiteSpace(_companyName) || !string.IsNullOrWhiteSpace(_ico);
+    private bool IsValid => !string.IsNullOrWhiteSpace(_firstName)
+                            && !string.IsNullOrWhiteSpace(_lastName)
+                            && !string.IsNullOrWhiteSpace(_phone)
+                            && (!_isCompany || (!string.IsNullOrWhiteSpace(_ico) && !string.IsNullOrWhiteSpace(_dic)));
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && EditingCustomer is not null)
+            PopulateFrom(EditingCustomer);
+    }
+
+    private void PopulateFrom(Customer c)
+    {
+        _isCompany    = c.Ico is not null;
+        _firstName    = c.FirstName;
+        _lastName     = c.LastName;
+        _companyName  = c.CompanyName ?? "";
+        _ico          = c.Ico ?? "";
+        _dic          = c.Dic ?? "";
+        _email        = c.Email ?? "";
+        _phone        = c.PhoneNumber;
+        _pickupLocation   = c.DefaultPickupLocation?.FullAddress ?? "";
+        _deliveryLocation = c.DefaultDeliveryLocation?.FullAddress ?? "";
+    }
+
+    private async Task Submit()
+    {
+        if (!IsValid) return;
+
+        if (EditingCustomer is not null)
+        {
+            await CustomerService.UpdateAsync(EditingCustomer.Id, c =>
+            {
+                c.FirstName    = _firstName.Trim();
+                c.LastName     = _lastName.Trim();
+                c.PhoneNumber  = _phone.Trim();
+                c.Email        = string.IsNullOrWhiteSpace(_email) ? null : _email.Trim();
+                c.CompanyName  = _isCompany && !string.IsNullOrWhiteSpace(_companyName) ? _companyName.Trim() : null;
+                c.Ico          = _isCompany && !string.IsNullOrWhiteSpace(_ico) ? _ico.Trim() : null;
+                c.Dic          = _isCompany && !string.IsNullOrWhiteSpace(_dic) ? _dic.Trim() : null;
+                c.DefaultPickupLocation   = string.IsNullOrWhiteSpace(_pickupLocation) ? null : new GeoLocation { FullAddress = _pickupLocation.Trim() };
+                c.DefaultDeliveryLocation = string.IsNullOrWhiteSpace(_deliveryLocation) ? null : new GeoLocation { FullAddress = _deliveryLocation.Trim() };
+            });
+        }
+        else
+        {
+            var customer = new Customer
+            {
+                FirstName    = _firstName.Trim(),
+                LastName     = _lastName.Trim(),
+                PhoneNumber  = _phone.Trim(),
+                Email        = string.IsNullOrWhiteSpace(_email) ? null : _email.Trim(),
+                CompanyName  = _isCompany && !string.IsNullOrWhiteSpace(_companyName) ? _companyName.Trim() : null,
+                Ico          = _isCompany && !string.IsNullOrWhiteSpace(_ico) ? _ico.Trim() : null,
+                Dic          = _isCompany && !string.IsNullOrWhiteSpace(_dic) ? _dic.Trim() : null,
+                DefaultPickupLocation   = string.IsNullOrWhiteSpace(_pickupLocation) ? null : new GeoLocation { FullAddress = _pickupLocation.Trim() },
+                DefaultDeliveryLocation = string.IsNullOrWhiteSpace(_deliveryLocation) ? null : new GeoLocation { FullAddress = _deliveryLocation.Trim() },
+            };
+            await CustomerService.AddAsync(customer);
+        }
+
+        await OnSaved.InvokeAsync();
+        Close();
+    }
+
+    private async Task Delete()
+    {
+        if (EditingCustomer is null) return;
+        await CustomerService.DeleteAsync(EditingCustomer.Id);
+        await OnDeleted.InvokeAsync();
+        Close();
+    }
+
+    private void Close()
+    {
+        _confirmDelete = false;
+        ResetForm();
+        OnClose.InvokeAsync();
+    }
+
+    private void ResetForm()
+    {
+        _isCompany = true;
+        _firstName = _lastName = _companyName = _ico = _dic = _email = _phone = _pickupLocation = _deliveryLocation = "";
+    }
+}

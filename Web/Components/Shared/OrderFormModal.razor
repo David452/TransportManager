@@ -1,0 +1,356 @@
+@using Core.Customer
+@using Core.Order
+@using Core.Geocoding
+@inject OrderService OrderService
+@inject CustomerService CustomerService
+@inject IGeocodingService GeocodingService
+
+@if (Visible)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @onclick="Close"></div>
+        <div class="relative z-10 bg-surface border border-border rounded-xl shadow-lg w-full max-w-xl mx-4 flex flex-col max-h-[90vh]">
+
+            <div class="flex items-start justify-between px-6 py-5 border-b border-border flex-shrink-0">
+                <div>
+                    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase mb-1">@(EditingOrder is null ? "Nová zákazka" : "Upraviť zákazku")</div>
+                    <div class="text-xl font-bold text-text">@(EditingOrder is null ? "Vytvoriť zákazku" : $"Z-{EditingOrder.Id.ToString()[..4].ToUpper()}")</div>
+                    @if (EditingOrder is null)
+                    {
+                        <div class="text-sm text-text-muted mt-1">Po vytvorení sa zákazka dostane do stavu „Nová" a môžete ju zaradiť do tripu.</div>
+                    }
+                </div>
+                <button class="text-text-faint hover:text-text transition-colors mt-0.5 flex-shrink-0" @onclick="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="px-6 pt-5 pb-0 flex-shrink-0 flex flex-col gap-2 relative z-10">
+                <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Zákazník</div>
+                <div class="relative" @ref="_dropdownRef">
+                    <button type="button"
+                            class="input w-full flex items-center gap-2 text-left"
+                            @onclick="ToggleDropdown">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 text-text-faint flex-shrink-0">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                        </svg>
+                        <span class="flex-1 truncate @(_selectedCustomerId is null ? "text-text-faint" : "text-text")">
+                            @(_selectedCustomerId is null ? "Vybrať zákazníka..." : GetCustomerDisplayName(_selectedCustomerId.Value))
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4 text-text-faint flex-shrink-0">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                        </svg>
+                    </button>
+
+                    @if (_dropdownOpen)
+                    {
+                        <div class="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-lg z-20 overflow-hidden">
+                            <div class="p-2 border-b border-border">
+                                <input class="input w-full text-sm" placeholder="Hľadať zákazníka..."
+                                       @bind="_customerSearch" @bind:event="oninput" @onclick:stopPropagation="true"/>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <button type="button"
+                                        class="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover transition-colors flex items-center gap-2 @(_selectedCustomerId is null ? "bg-accent-faint text-accent" : "text-text-muted")"
+                                        @onclick="() => SelectCustomer(null)">
+                                    <span class="italic">Bez zákazníka</span>
+                                </button>
+                                @foreach (var c in FilteredCustomers)
+                                {
+                                    var cId = c.Id;
+                                    <button type="button"
+                                            class="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover transition-colors @(_selectedCustomerId == cId ? "bg-accent-faint text-accent" : "text-text")"
+                                            @onclick="() => SelectCustomer(cId)">
+                                        <div class="font-medium">@GetCustomerDisplayName(cId)</div>
+                                        @if (c.CompanyName is not null)
+                                        {
+                                            <div class="text-xs text-text-muted">@c.FullName</div>
+                                        }
+                                    </button>
+                                }
+                                @if (!FilteredCustomers.Any())
+                                {
+                                    <div class="px-3 py-4 text-sm text-text-faint text-center">Žiadni zákazníci</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-6">
+
+                <div class="flex flex-col gap-3">
+                    <div>
+                        <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Trasa</div>
+                        <div class="text-xs text-text-faint mt-0.5">Vyber miesta, alebo nech sa predvyplnia z karty zákazníka.</div>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1 flex flex-col gap-1">
+                            <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Nakládka <span class="text-red-400">*</span></label>
+                            <div class="relative">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                     class="size-4 text-text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                </svg>
+                                <input class="input w-full pl-9 @(_originError is not null ? "border-red-400" : "")" placeholder="123, Hlavná, Bratislava"
+                                       @bind="_origin" @bind:event="oninput" @bind:after="() => _originError = null"/>
+                            </div>
+                            @if (_originError is not null)
+                            {
+                                <span class="text-xs text-red-400">@_originError</span>
+                            }
+                        </div>
+                        <div class="flex-shrink-0 pb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4 text-text-muted">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 flex flex-col gap-1">
+                            <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Vykládka <span class="text-red-400">*</span></label>
+                            <div class="relative">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                     class="size-4 text-text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                </svg>
+                                <input class="input w-full pl-9 @(_destinationError is not null ? "border-red-400" : "")" placeholder="123, Hlavná, Bratislava"
+                                       @bind="_destination" @bind:event="oninput" @bind:after="() => _destinationError = null"/>
+                            </div>
+                            @if (_destinationError is not null)
+                            {
+                                <span class="text-xs text-red-400">@_destinationError</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Náklad</div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Hmotnosť <span class="text-red-400">*</span></label>
+                        <div class="flex items-center gap-2">
+                            <input class="input w-36 text-right" type="number" min="0.1" max="100" step="0.1"
+                                   @bind="_weightTons" @bind:event="oninput"/>
+                            <span class="text-sm text-text-muted">t</span>
+                        </div>
+                        <div class="text-xs text-text-faint">V tonách. Použije sa na výber vhodného vozidla.</div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <div>
+                        <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Poznámka</div>
+                        <div class="text-xs text-text-faint mt-0.5">Voliteľné. Napr. „ráno", „ADR", „krehké"…</div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-text-muted uppercase tracking-wide">Poznámka k zákazke</label>
+                            <span class="text-xs text-text-faint">voliteľné</span>
+                        </div>
+                        <textarea class="input w-full resize-y min-h-24" placeholder="napr. ráno, krehké, paleta vratná…"
+                                  @bind="_note" @bind:event="oninput"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="flex items-center gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+                @if (EditingOrder is not null)
+                {
+                    @if (_confirmDelete)
+                    {
+                        <span class="text-sm text-text-muted mr-auto">Naozaj odstrániť zákazku?</span>
+                        <button class="btn" @onclick="() => _confirmDelete = false">Nie</button>
+                        <button class="btn text-red-500 border-red-200 hover:bg-red-50" @onclick="Delete">Áno, odstrániť</button>
+                    }
+                    else
+                    {
+                        <button class="btn text-red-500 border-red-200 hover:bg-red-50 mr-auto" @onclick="() => _confirmDelete = true">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                            </svg>
+                            Odstrániť
+                        </button>
+                        <button class="btn" @onclick="Close">Zrušiť</button>
+                        <button class="btn btn-primary gap-1.5" @onclick="Submit" disabled="@(!IsValid || _submitting)">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                            </svg>
+                            Uložiť zmeny
+                        </button>
+                    }
+                }
+                else
+                {
+                    @if (!IsValid)
+                    {
+                        <span class="text-sm text-text-faint mr-auto">Vyber zákazníka a trasu</span>
+                    }
+                    <button class="btn @(IsValid ? "ml-auto" : "")" @onclick="Close">Zrušiť</button>
+                    <button class="btn btn-primary gap-1.5" @onclick="Submit" disabled="@(!IsValid || _submitting)">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        Vytvoriť zákazku
+                    </button>
+                }
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public bool Visible { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnDeleted { get; set; }
+    [Parameter] public Order? EditingOrder { get; set; }
+    [Parameter] public Guid? InitialCustomerId { get; set; }
+
+    private ElementReference _dropdownRef;
+    private bool _dropdownOpen;
+    private string _customerSearch = "";
+    private Guid? _selectedCustomerId;
+
+    private string _origin = "";
+    private string _destination = "";
+    private double _weightTons = 0.1;
+    private string _note = "";
+
+    private string? _originError;
+    private string? _destinationError;
+    private bool _submitting;
+    private bool _confirmDelete;
+
+    private bool IsValid => !string.IsNullOrWhiteSpace(_origin) && !string.IsNullOrWhiteSpace(_destination) && _weightTons > 0;
+
+    private List<Customer> FilteredCustomers => CustomerService.GetAll()
+        .Where(c => string.IsNullOrWhiteSpace(_customerSearch) ||
+                    c.FullName.Contains(_customerSearch, StringComparison.OrdinalIgnoreCase) ||
+                    (c.CompanyName?.Contains(_customerSearch, StringComparison.OrdinalIgnoreCase) ?? false))
+        .ToList();
+
+    private string GetCustomerDisplayName(Guid id)
+    {
+        var c = CustomerService.GetById(id);
+        if (c is null) return "---";
+        return c.CompanyName ?? c.FullName;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && EditingOrder is not null)
+            PopulateFrom(EditingOrder);
+        else if (Visible && InitialCustomerId is not null && _selectedCustomerId is null)
+            SelectCustomer(InitialCustomerId);
+    }
+
+    private void PopulateFrom(Order o)
+    {
+        _selectedCustomerId   = o.CustomerId;
+        _origin               = o.Origin.FullAddress;
+        _destination          = o.Destination.FullAddress;
+        _weightTons           = o.WeightTons;
+        _note                 = o.Note ?? "";
+    }
+
+    private void ToggleDropdown() => _dropdownOpen = !_dropdownOpen;
+
+    private void SelectCustomer(Guid? id)
+    {
+        _selectedCustomerId = id;
+        _dropdownOpen = false;
+        _customerSearch = "";
+
+        if (id is not null)
+        {
+            var customer = CustomerService.GetById(id.Value);
+            if (customer is not null)
+            {
+                if (string.IsNullOrWhiteSpace(_origin) && customer.DefaultPickupLocation is not null)
+                    _origin = customer.DefaultPickupLocation.FullAddress;
+                if (string.IsNullOrWhiteSpace(_destination) && customer.DefaultDeliveryLocation is not null)
+                    _destination = customer.DefaultDeliveryLocation.FullAddress;
+            }
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (!IsValid || _submitting) return;
+
+        _submitting = true;
+        _originError = null;
+        _destinationError = null;
+
+        var origin = await GeocodingService.GeocodeAsync(_origin.Trim());
+        var destination = await GeocodingService.GeocodeAsync(_destination.Trim());
+
+        if (origin is null) _originError = "Adresu sa nepodarilo nájsť.";
+        if (destination is null) _destinationError = "Adresu sa nepodarilo nájsť.";
+
+        if (_originError is not null || _destinationError is not null)
+        {
+            _submitting = false;
+            return;
+        }
+
+        if (EditingOrder is not null)
+        {
+            await OrderService.UpdateAsync(EditingOrder.Id, o =>
+            {
+                o.Origin      = origin!;
+                o.Destination = destination!;
+                o.CustomerId  = _selectedCustomerId;
+                o.WeightTons  = _weightTons;
+                o.Note        = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim();
+            });
+        }
+        else
+        {
+            var order = new Order(origin!, destination!, string.IsNullOrWhiteSpace(_note) ? null : _note.Trim())
+            {
+                CustomerId = _selectedCustomerId,
+                WeightTons = _weightTons,
+            };
+            await OrderService.AddAsync(order);
+        }
+
+        await OnSaved.InvokeAsync();
+        Close();
+    }
+
+    private async Task Delete()
+    {
+        if (EditingOrder is null) return;
+        await OrderService.DeleteAsync(EditingOrder.Id);
+        await OnDeleted.InvokeAsync();
+        Close();
+    }
+
+    private void Close()
+    {
+        _dropdownOpen = false;
+        ResetForm();
+        OnClose.InvokeAsync();
+    }
+
+    private void ResetForm()
+    {
+        _selectedCustomerId = null;
+        _customerSearch = "";
+        _origin = "";
+        _destination = "";
+        _weightTons = 0.1;
+        _note = "";
+        _originError = null;
+        _destinationError = null;
+        _submitting = false;
+        _confirmDelete = false;
+    }
+}
