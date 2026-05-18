@@ -29,7 +29,12 @@
 
     public async ValueTask DisposeAsync()
     {
-        await JS.InvokeVoidAsync("eval", $"delete window.mapInstances['{_mapId}']");
+        try
+        {
+            await JS.InvokeVoidAsync("disposeMap", _mapId);
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
     }
 
 }

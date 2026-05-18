@@ -46,6 +46,15 @@ window.showRoute = (elementId, polylinePoints, originLabel, destinationLabel) =>
     map.fitBounds(line.getBounds(), { padding: [32, 32] });
 };
 
+window.disposeMap = (elementId) => {
+    const map = window.mapInstances[elementId];
+    if (map) {
+        map.remove();
+        delete window.mapInstances[elementId];
+    }
+    delete window.tileLayers[elementId];
+};
+
 new MutationObserver(() => {
     const url = currentTileUrl();
     for (const id in window.tileLayers) {

@@ -4,8 +4,9 @@ namespace Core.Storage;
 
 public class JsonDataStorage<T> : IDataStorage<T>
 {
-
     private readonly string _path;
+    private readonly SemaphoreSlim _lock = new(1, 1);
+
     public JsonDataStorage(string path)
     {
         _path = Path.Combine(AppContext.BaseDirectory, path);
@@ -15,7 +16,7 @@ public class JsonDataStorage<T> : IDataStorage<T>
     {
         WriteIndented = true
     };
-    
+
     public async Task SaveAsync(IReadOnlyCollection<T> items)
     {
         var dir = Path.GetDirectoryName(_path);
@@ -24,8 +25,16 @@ public class JsonDataStorage<T> : IDataStorage<T>
             Directory.CreateDirectory(dir);
         }
 
-        await using var stream = File.Create(_path);
-        await JsonSerializer.SerializeAsync(stream, items, _options);
+        await _lock.WaitAsync();
+        try
+        {
+            await using var stream = new FileStream(_path, FileMode.Create, FileAccess.Write, FileShare.None);
+            await JsonSerializer.SerializeAsync(stream, items, _options);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public async Task<IList<T>> LoadAsync()
@@ -35,7 +44,15 @@ public class JsonDataStorage<T> : IDataStorage<T>
             return [];
         }
 
-        await using var stream = File.OpenRead(_path);
-        return await JsonSerializer.DeserializeAsync<IList<T>>(stream, _options) ?? [];
+        await _lock.WaitAsync();
+        try
+        {
+            await using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return await JsonSerializer.DeserializeAsync<IList<T>>(stream, _options) ?? [];
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 }
