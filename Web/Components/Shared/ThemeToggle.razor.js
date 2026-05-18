@@ -1,15 +1,16 @@
-export class ThemeToggle {
-  
-}
-
-window.ThemeToggle = ThemeToggle;
-
 export function toggle() {
-    console.log("Toggle Theme Toggle");
     const html = document.documentElement;
-    if (html.getAttribute('data-theme') === 'dark') {
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    if (isDark) {
         html.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
     } else {
         html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
     }
+    return !isDark ? 'dark' : 'light';
+}
+
+export function getTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 }

@@ -12,7 +12,23 @@
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
-    <script>(function(){var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
+    <script>
+        (function () {
+            var html = document.documentElement;
+            function applyTheme() {
+                var t = localStorage.getItem('theme');
+                var current = html.getAttribute('data-theme');
+                if (t === 'dark' && current !== 'dark') {
+                    html.setAttribute('data-theme', 'dark');
+                } else if (t !== 'dark' && current === 'dark') {
+                    html.removeAttribute('data-theme');
+                }
+            }
+            applyTheme();
+            new MutationObserver(applyTheme).observe(html, { attributes: true });
+            document.addEventListener('enhancedload', applyTheme);
+        })();
+    </script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin=""/>

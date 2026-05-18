@@ -1,4 +1,12 @@
 window.mapInstances = {};
+window.tileLayers = {};
+
+const LIGHT_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const DARK_TILES = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+function currentTileUrl() {
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? DARK_TILES : LIGHT_TILES;
+}
 
 window.initMap = (elementId, interactive = true) => {
     const map = L.map(elementId, {
@@ -9,12 +17,14 @@ window.initMap = (elementId, interactive = true) => {
         touchZoom: interactive,
         keyboard: interactive,
     }).setView([48.7, 19.5], 7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    window.mapInstances[elementId] = map;
 
-}
+    const tiles = L.tileLayer(currentTileUrl(), {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+
+    window.mapInstances[elementId] = map;
+    window.tileLayers[elementId] = tiles;
+};
 
 window.showRoute = (elementId, polylinePoints, originLabel, destinationLabel) => {
     const map = window.mapInstances[elementId];
@@ -35,3 +45,10 @@ window.showRoute = (elementId, polylinePoints, originLabel, destinationLabel) =>
 
     map.fitBounds(line.getBounds(), { padding: [32, 32] });
 };
+
+new MutationObserver(() => {
+    const url = currentTileUrl();
+    for (const id in window.tileLayers) {
+        window.tileLayers[id].setUrl(url);
+    }
+}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
