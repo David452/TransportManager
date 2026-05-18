@@ -1,7 +1,458 @@
-﻿@page "/"
+@page "/"
+@rendermode InteractiveServer
+@using Core.Customer
+@using Core.Geocoding
+@using Core.Order
+@using Core.OSRM
+@using Core.Trip
+@using Web.Components.Shared
+@inject OrderService OrderService
+@inject CustomerService CustomerService
+@inject IRouteService RouteService
+@inject TripBuilderService TripBuilder
+@inject TripService TripService
+@inject NavigationManager NavManager
 
-<PageTitle>Home</PageTitle>
+<PlannerHeader Trip="_currentTrip" DistanceKm="_totalDistanceKm" Duration="_totalDuration" OnSave="SaveTrip"/>
 
-<h1>Hello, world!</h1>
+<div class="flex-1 overflow-hidden flex">
 
-Welcome to your new app.
+    <aside class="w-80 flex-shrink-0 flex flex-col border-r border-border bg-surface overflow-hidden">
+        <div class="px-4 pt-4 pb-3 flex items-start justify-between flex-shrink-0">
+            <div>
+                <div class="text-base font-bold text-text">Nové zákazky</div>
+                <div class="text-sm text-text-muted">@_newOrders.Count čaká na zaradenie</div>
+            </div>
+        </div>
+
+        <div class="overflow-y-auto flex-1 px-3 pb-3 flex flex-col gap-2">
+            @foreach (var order in _newOrders)
+            {
+                <div class="bg-surface border border-border rounded-xl flex flex-col overflow-hidden">
+                    <div class="px-3 pt-3 pb-2 flex flex-col gap-1.5">
+                        <div class="flex items-center justify-between">
+                            <Badge Label="nová" HighlightClass="new"/>
+                            <span class="text-xs font-semibold text-text-faint">Z-@order.Id.ToString()[..4].ToUpper()</span>
+                        </div>
+                        <div class="text-sm font-bold text-text">
+                            @order.Origin.DisplayName
+                            <span class="text-text-muted font-normal mx-1">→</span>
+                            @order.Destination.DisplayName
+                        </div>
+                        <div class="text-xs text-text-muted">
+                            @GetCustomerName(order.CustomerId)
+                            @if (order.WeightTons > 0)
+                            {
+                                <span> · @order.WeightTons t</span>
+                            }
+                        </div>
+                        @if (order.Note is not null)
+                        {
+                            <div class="text-xs text-text-faint italic">@order.Note</div>
+                        }
+                    </div>
+                    <div class="border-t border-dashed border-border mx-3"></div>
+                    <button class="flex items-center justify-end gap-1.5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent-faint transition-colors" @onclick="() => AddToTrip(order.Id)">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-3.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        Pridať do tripu
+                    </button>
+                </div>
+            }
+            @if (_newOrders.Count == 0)
+            {
+                <div class="flex-1 flex items-center justify-center text-sm text-text-faint italic py-8">Žiadne nové zákazky</div>
+            }
+        </div>
+    </aside>
+
+    <div class="flex-1 overflow-hidden p-4 isolate">
+        <div class="card overflow-hidden h-full">
+            @if (_loading)
+            {
+                <div class="flex items-center justify-center h-full text-text-muted text-sm">Načítavam mapu…</div>
+            }
+            else if (_error is not null)
+            {
+                <div class="flex items-center justify-center h-full text-red-400 text-sm">@_error</div>
+            }
+            else
+            {
+                <Map @ref="_map" Height="100%"/>
+            }
+        </div>
+    </div>
+
+    <aside class="w-72 flex-shrink-0 flex flex-col border-l border-border bg-surface overflow-hidden">
+
+        <div class="px-4 pt-4 pb-3 border-b border-border flex-shrink-0">
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="text-base font-bold text-text">Detail tripu</div>
+                    <div class="text-sm text-text-muted">@($"T-{_currentTrip.Id.ToString()[..4].ToUpper()}")</div>
+                </div>
+                <Badge Label="Plánovaný" HighlightClass="new"/>
+            </div>
+        </div>
+
+        <div class="flex-1 min-h-0 overflow-hidden">
+        <div class="h-full overflow-y-auto">
+            @if (_currentTrip.Stops.Count == 0)
+            {
+                <div class="flex items-center justify-center h-full text-sm text-text-faint italic py-8 px-4 text-center">Pridaj zákazky z ľavého panelu</div>
+            }
+            else
+            {
+                <div class="px-4 pt-4 pb-2">
+                    <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Zastávky · @_currentTrip.Stops.Count</div>
+                </div>
+                <div class="px-4 pb-4">
+                    @for (int i = 0; i < _currentTrip.Stops.Count; i++)
+                    {
+                        var stop = _currentTrip.Stops[i];
+                        var order = OrderService.GetById(stop.OrderId);
+                        var location = stop.Type == StopType.Pickup ? order?.Origin : order?.Destination;
+                        var isPickup = stop.Type == StopType.Pickup;
+                        var isLast = i == _currentTrip.Stops.Count - 1;
+                        var idx = i;
+
+                        <div class="flex gap-2.5">
+                            <div class="flex flex-col items-center flex-shrink-0">
+                                <div class="@(isPickup ? "bg-accent text-white" : "border-2 border-accent text-accent") w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">@(i + 1)</div>
+                                @if (!isLast)
+                                {
+                                    <div class="w-px bg-border flex-1 mt-1" style="min-height: 2.5rem"></div>
+                                }
+                            </div>
+
+                            <div class="flex-1 min-w-0 @(isLast ? "" : "pb-4")">
+                                <div class="flex items-start justify-between gap-1">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-accent-faint text-accent uppercase tracking-wide flex-shrink-0">@(isPickup ? "Nakl." : "Vykl.")</span>
+                                            <span class="text-sm font-bold text-text truncate">@(location?.DisplayName ?? "—")</span>
+                                        </div>
+                                        <div class="text-xs text-text-muted mt-0.5">@(isPickup ? "Nakládka" : "Vykládka") — @GetCustomerName(order?.CustomerId)</div>
+                                        <div class="text-xs text-text-faint mt-0.5">Z-@order?.Id.ToString()[..4].ToUpper()</div>
+                                    </div>
+                                    <div class="flex flex-col flex-shrink-0">
+                                        <button disabled="@(idx == 0)" @onclick="() => MoveStop(idx, idx - 1)" class="p-1 text-text-faint hover:text-text transition-colors disabled:opacity-20 disabled:cursor-default">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-3.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/>
+                                            </svg>
+                                        </button>
+                                        <button disabled="@(idx == _currentTrip.Stops.Count - 1)" @onclick="() => MoveStop(idx, idx + 1)" class="p-1 text-text-faint hover:text-text transition-colors disabled:opacity-20 disabled:cursor-default">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-3.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                                            </svg>
+                                        </button>
+                                        <button @onclick="() => RemoveStop(idx)" class="p-1 text-text-faint hover:text-red-400 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-3.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                @if (!isLast)
+                                {
+                                    <div class="mt-2 text-xs text-text-faint flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"/>
+                                        </svg>
+                                        <span>@(_segmentDistances.Count > idx && _segmentDistances[idx].HasValue ? $"{_segmentDistances[idx]} km" : "…")</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        </div>
+
+        <div class="border-t border-border px-4 py-3 flex-shrink-0 flex items-center gap-3 bg-surface z-50">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 text-accent flex-shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
+                    </svg>
+                    <span class="text-sm font-bold text-text">Návrhy po ceste</span>
+                </div>
+                <div class="text-xs text-text-muted mt-0.5">
+                    @if (_suggestions is not null)
+                    {
+                        <span>@_suggestions.Count zákaziek nájdených</span>
+                    }
+                    else
+                    {
+                        <span>zákazky v koridore</span>
+                    }
+                </div>
+            </div>
+            @if (_suggestions is not null || _loadingSuggestions)
+            {
+                <button @onclick="() => _suggestions = null" class="p-2 text-text-faint hover:text-text transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-primary gap-1.5 text-sm" disabled="@(_currentTrip.Stops.Count < 2 ? "disabled" : null)" @onclick="FindSuggestions">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                    </svg>
+                    Nájdi
+                </button>
+            }
+        </div>
+
+        @if (_suggestions is not null || _loadingSuggestions)
+        {
+            <div class="border-t border-border overflow-y-auto flex-shrink-0 relative z-10" style="max-height: 45%">
+                @if (_loadingSuggestions)
+                {
+                    <div class="flex items-center justify-center py-8 text-sm text-text-muted">Hľadám zákazky…</div>
+                }
+                else if (_suggestions!.Count == 0)
+                {
+                    <div class="flex items-center justify-center py-8 text-sm text-text-faint italic px-4 text-center">Žiadne zákazky v koridore</div>
+                }
+                else
+                {
+                    <div class="p-3 flex flex-col gap-2">
+                        @foreach (var suggestion in _suggestions)
+                        {
+                            var s = suggestion;
+                            <div class="bg-bg border border-border rounded-xl px-3 pt-3 pb-2 flex flex-col gap-1.5">
+                                <div class="text-sm font-bold text-text">
+                                    @s.Order.Origin.DisplayName
+                                    <span class="text-text-muted font-normal mx-1">→</span>
+                                    @s.Order.Destination.DisplayName
+                                </div>
+                                <div class="text-xs text-text-muted">
+                                    @GetCustomerName(s.Order.CustomerId)
+                                    @if (s.Order.WeightTons > 0)
+                                    {
+                                        <span> · @s.Order.WeightTons t</span>
+                                    }
+                                </div>
+                                <div class="border-t border-dashed border-border mt-0.5"></div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-text-faint">Z-@s.Order.Id.ToString()[..4].ToUpper()</span>
+                                    <button class="flex items-center gap-1 text-xs font-semibold text-accent hover:bg-accent-faint px-2 py-1 rounded-lg transition-colors" @onclick="() => AddToTrip(s.Order.Id)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                        </svg>
+                                        Pridať do tripu
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+    </aside>
+
+</div>
+
+@code {
+    private Map? _map;
+    private bool _loading = true;
+    private string? _error;
+    private List<Order> _newOrders = [];
+    private Trip _currentTrip = new Trip(DateOnly.FromDateTime(DateTime.Now), []);
+    private List<int?> _segmentDistances = [];
+    private int _totalDistanceKm;
+    private TimeSpan _totalDuration;
+    private List<OrderSuggestion>? _suggestions;
+    private bool _loadingSuggestions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(OrderService.LoadAsync(), CustomerService.LoadAsync(), TripService.LoadAsync());
+        _newOrders = OrderService.GetByStatus(OrderStatus.New);
+    }
+
+    private string GetCustomerName(Guid? customerId)
+    {
+        if (customerId is null) return "—";
+        var c = CustomerService.GetById(customerId.Value);
+        if (c is null) return "—";
+        return c.CompanyName ?? c.FullName;
+    }
+
+    private async Task FindSuggestions()
+    {
+        if (_currentTrip.Stops.Count < 2) return;
+
+        _loadingSuggestions = true;
+        _suggestions = null;
+        StateHasChanged();
+
+        TripBuilder.Reset();
+        var tripOrders = _currentTrip.Stops
+            .Select(s => s.OrderId)
+            .Distinct()
+            .Select(id => OrderService.GetById(id))
+            .Where(o => o is not null)
+            .Select(o => o!);
+        TripBuilder.LoadFromTrip(tripOrders);
+
+        var candidates = OrderService.GetByStatus(OrderStatus.New);
+        _suggestions = (await TripBuilder.SuggestNearbyOrderAsync(candidates, thresholdKm: 75)).ToList();
+        _loadingSuggestions = false;
+    }
+
+    private async Task AddToTrip(Guid orderId)
+    {
+        if (_currentTrip.Stops.Any(s => s.OrderId == orderId)) return;
+
+        await OrderService.UpdateAsync(orderId, o => o.Status = OrderStatus.Assigned);
+        _currentTrip.Stops.Add(new TripStop(orderId, StopType.Pickup));
+        _currentTrip.Stops.Add(new TripStop(orderId, StopType.Dropoff));
+        _newOrders.RemoveAll(o => o.Id == orderId);
+        _suggestions?.RemoveAll(s => s.Order.Id == orderId);
+        await Task.WhenAll(RefreshSegmentDistances(), RefreshMap());
+    }
+
+    private async Task MoveStop(int from, int to)
+    {
+        (_currentTrip.Stops[from], _currentTrip.Stops[to]) = (_currentTrip.Stops[to], _currentTrip.Stops[from]);
+        await Task.WhenAll(RefreshSegmentDistances(), RefreshMap());
+    }
+
+    private async Task RemoveStop(int index)
+    {
+        var orderId = _currentTrip.Stops[index].OrderId;
+        _currentTrip.Stops.RemoveAll(s => s.OrderId == orderId);
+
+        await OrderService.UpdateAsync(orderId, o => o.Status = OrderStatus.New);
+        var order = OrderService.GetById(orderId);
+        if (order is not null && !_newOrders.Contains(order))
+            _newOrders.Add(order);
+
+        await Task.WhenAll(RefreshSegmentDistances(), RefreshMap());
+    }
+
+    private async Task SaveTrip()
+    {
+        if (_currentTrip.Stops.Count == 0) return;
+        await TripService.AddAsync(_currentTrip);
+        _currentTrip = new Trip(DateOnly.FromDateTime(DateTime.Now), []);
+        _segmentDistances = [];
+        _totalDistanceKm = 0;
+        _totalDuration = TimeSpan.Zero;
+        _newOrders = OrderService.GetByStatus(OrderStatus.New);
+        NavManager.NavigateTo("/tripy");
+    }
+
+    private async Task RefreshMap()
+    {
+        if (_map is null) return;
+
+        var locations = _currentTrip.Stops
+            .Select(GetStopLocation)
+            .Where(l => l is not null)
+            .Select(l => l!)
+            .ToList();
+
+        if (locations.Count < 2) return;
+
+        try
+        {
+            var route = await RouteService.GetRouteAsync(locations);
+            _totalDistanceKm = (int)route.DistanceKm;
+            _totalDuration = route.Duration;
+            var points = PolylineDecoder.Decode(route.EncodedPolyline)
+                .Select(p => new double[] { p.Lat, p.Lon })
+                .ToList();
+
+            await _map.ShowRoute(
+                new[] { locations.First().Latitude, locations.First().Longitude },
+                new[] { locations.Last().Latitude, locations.Last().Longitude },
+                locations.First().DisplayName,
+                locations.Last().DisplayName,
+                points
+            );
+        }
+        catch { }
+    }
+
+    private async Task RefreshSegmentDistances()
+    {
+        var count = Math.Max(0, _currentTrip.Stops.Count - 1);
+        _segmentDistances = Enumerable.Repeat<int?>(null, count).ToList();
+        StateHasChanged();
+
+        for (int i = 0; i < _currentTrip.Stops.Count - 1; i++)
+        {
+            var a = GetStopLocation(_currentTrip.Stops[i]);
+            var b = GetStopLocation(_currentTrip.Stops[i + 1]);
+            if (a is null || b is null) continue;
+            try
+            {
+                var route = await RouteService.GetRouteAsync(a, b);
+                if (i < _segmentDistances.Count)
+                    _segmentDistances[i] = (int)route.DistanceKm;
+                StateHasChanged();
+            }
+            catch { }
+        }
+    }
+
+    private GeoLocation? GetStopLocation(TripStop stop)
+    {
+        var order = OrderService.GetById(stop.OrderId);
+        if (order is null) return null;
+        var loc = stop.Type == StopType.Pickup ? order.Origin : order.Destination;
+        return loc.Latitude != 0 || loc.Longitude != 0 ? loc : null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _loading = false;
+        StateHasChanged();
+        await Task.Yield();
+
+        var orders = OrderService.GetAll()
+            .Where(o => o.Origin.Latitude != 0 && o.Destination.Latitude != 0)
+            .ToList();
+
+        if (orders.Count == 0)
+        {
+            _error = "Žiadne zákazky so súradnicami.";
+            StateHasChanged();
+            return;
+        }
+
+        var order = orders.First();
+        try
+        {
+            var route = await RouteService.GetRouteAsync(order.Origin, order.Destination);
+            var points = PolylineDecoder.Decode(route.EncodedPolyline)
+                .Select(p => new double[] { p.Lat, p.Lon })
+                .ToList();
+
+            await _map!.ShowRoute(
+                new[] { order.Origin.Latitude, order.Origin.Longitude },
+                new[] { order.Destination.Latitude, order.Destination.Longitude },
+                order.Origin.DisplayName,
+                order.Destination.DisplayName,
+                points
+            );
+        }
+        catch
+        {
+            _error = "Trasu sa nepodarilo načítať.";
+            StateHasChanged();
+        }
+    }
+}

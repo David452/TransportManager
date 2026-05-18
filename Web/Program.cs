@@ -20,6 +20,8 @@ builder.Services.AddSingleton<CustomerService>();
 builder.Services.AddHttpClient<IRouteService, OsrmRouteService>();
 builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
 
+builder.Services.AddSingleton<TripBuilderService>();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

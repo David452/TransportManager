@@ -1,0 +1,152 @@
+@using Core.Order
+@using Core.OSRM
+@using Core.Trip
+@using Core.Geocoding
+@inject OrderService OrderService
+@inject IRouteService RouteService
+
+<TripDetailModal Visible="_modalOpen" Trip="Trip" OnClose="@(() => _modalOpen = false)" OnChanged="StateHasChanged" OnDeleted="HandleDeleted"/>
+
+<div class="card overflow-hidden flex flex-col cursor-pointer hover:border-accent/40 transition-colors" @onclick="() => _modalOpen = true">
+
+    <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
+        <div>
+            <div class="text-sm font-semibold text-accent">T-@Trip.Id.ToString()[..4].ToUpper()</div>
+            <div class="text-lg font-bold text-text leading-tight">@FormatDate(Trip.DepartureDate)</div>
+            <div class="text-sm text-text-muted mt-0.5">BA-321 GH (DAF XF)</div>
+        </div>
+        <Badge Label="@StatusLabel" HighlightClass="@StatusHighlight"/>
+    </div>
+
+    <div class="h-44 bg-surface-2 border-y border-border isolate">
+        @if (_routeError)
+        {
+            <div class="flex items-center justify-center h-full text-xs text-text-faint">Trasu sa nepodarilo načítať</div>
+        }
+        else
+        {
+            <Map @ref="_map" Height="100%" Interactive="false"/>
+        }
+    </div>
+
+    <div class="px-4 pt-3 pb-4 flex flex-col gap-3">
+        <div class="text-sm text-text-muted truncate">@RouteStopsText</div>
+        <div class="grid grid-cols-4 gap-2">
+            <div>
+                <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Vzdialenosť</div>
+                <div class="text-sm font-bold text-text mt-0.5">@(_route is null ? "…" : $"{(int)_route.DistanceKm} km")</div>
+            </div>
+            <div>
+                <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Jazda</div>
+                <div class="text-sm font-bold text-text mt-0.5">@(_route is null ? "…" : FormatDuration(_route.Duration))</div>
+            </div>
+            <div>
+                <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Zákazky</div>
+                <div class="text-sm font-bold text-text mt-0.5">@Trip.OrderIds.Count()</div>
+            </div>
+            <div>
+                <div class="text-xs font-semibold tracking-widest text-text-muted uppercase">Zastávky</div>
+                <div class="text-sm font-bold text-text mt-0.5">@Trip.Stops.Count</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Trip Trip { get; set; } = null!;
+    [Parameter] public EventCallback OnDeleted { get; set; }
+
+    private Map? _map;
+    private bool _routeError;
+    private bool _modalOpen;
+
+    private async Task HandleDeleted() => await OnDeleted.InvokeAsync();
+    private RouteResult? _route;
+
+    private string StatusLabel => Trip.Status switch
+    {
+        TripStatus.Scheduled => "Plánovaný",
+        TripStatus.OnGoing   => "Prebieha",
+        TripStatus.Completed => "Dokončený",
+        _                    => "Neznámy",
+    };
+
+    private string StatusHighlight => Trip.Status switch
+    {
+        TripStatus.Scheduled => "new",
+        TripStatus.OnGoing   => "ontrip",
+        TripStatus.Completed => "delivered",
+        _                    => "muted",
+    };
+
+    private string RouteStopsText
+    {
+        get
+        {
+            var names = Trip.Stops
+                .Select(s =>
+                {
+                    var order = OrderService.GetById(s.OrderId);
+                    if (order is null) return null;
+                    var loc = s.Type == StopType.Pickup ? order.Origin : order.Destination;
+                    return loc.DisplayName;
+                })
+                .Where(n => n is not null)
+                .Distinct()
+                .ToList();
+
+            return names.Count == 0 ? "—" : string.Join(" → ", names);
+        }
+    }
+
+    private static string FormatDuration(TimeSpan t) =>
+        t.TotalHours >= 1 ? $"{(int)t.TotalHours} h {t.Minutes} min" : $"{t.Minutes} min";
+
+    private static string FormatDate(DateOnly date)
+    {
+        var dayNames = new[] { "Nedeľa", "Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok", "Sobota" };
+        var monthNames = new[] { "", "jan", "feb", "mar", "apr", "máj", "jún", "júl", "aug", "sep", "okt", "nov", "dec" };
+        return $"{dayNames[(int)date.DayOfWeek]}, {date.Day}. {monthNames[date.Month]}";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _map is null) return;
+
+        var stops = Trip.Stops
+            .Select(s =>
+            {
+                var order = OrderService.GetById(s.OrderId);
+                if (order is null) return (GeoLocation?)null;
+                return s.Type == StopType.Pickup ? order.Origin : order.Destination;
+            })
+            .Where(l => l is not null && (l.Latitude != 0 || l.Longitude != 0))
+            .Select(l => l!)
+            .ToList();
+
+        if (stops.Count < 2) return;
+
+        try
+        {
+            _route = await RouteService.GetRouteAsync(stops);
+            var points = PolylineDecoder.Decode(_route.EncodedPolyline)
+                .Select(p => new double[] { p.Lat, p.Lon })
+                .ToList();
+
+            await _map.ShowRoute(
+                new[] { stops.First().Latitude, stops.First().Longitude },
+                new[] { stops.Last().Latitude, stops.Last().Longitude },
+                stops.First().DisplayName,
+                stops.Last().DisplayName,
+                points
+            );
+            StateHasChanged();
+        }
+        catch
+        {
+            _routeError = true;
+            StateHasChanged();
+        }
+    }
+}

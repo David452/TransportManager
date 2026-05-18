@@ -9,6 +9,12 @@ public class TripBuilderService(IRouteService routeService)
     private List<TripStop> _stops = [];
     private readonly Dictionary<Guid, Order.Order> _orders = new();
 
+    public void Reset()
+    {
+        _stops.Clear();
+        _orders.Clear();
+    }
+
     public void AddOrder(Order.Order order)
     {
         _orders[order.Id] = order;
