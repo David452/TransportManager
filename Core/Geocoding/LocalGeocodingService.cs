@@ -4,7 +4,7 @@ namespace Core.Geocoding;
 
 public class LocalGeocodingService : IGeocodingService
 {
-    private List<GeoLocation> _locations = new(); 
+    private List<GeoLocation> _locations = new();
     private readonly IDataStorage<GeoLocation> _dataStorage;
 
     public LocalGeocodingService(IDataStorage<GeoLocation> dataStorage)
@@ -31,13 +31,13 @@ public class LocalGeocodingService : IGeocodingService
         {
             return Task.FromResult<GeoLocation?>(result);
         }
-        
+
         var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        
+
         result = _locations.FirstOrDefault(l =>
             words.All(word =>
                 l.FullAddress.Contains(word, StringComparison.OrdinalIgnoreCase)));
-        
+
         return Task.FromResult(result);
     }
 }

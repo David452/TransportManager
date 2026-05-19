@@ -48,7 +48,7 @@ public static class TripCommands
                 new(id, StopType.Pickup),
                 new(id, StopType.Dropoff)
             }).ToList();
-            
+
             var trip = new Trip(date, stops);
             await tripService.AddAsync(trip);
             foreach (var id in orderIds)
@@ -84,7 +84,7 @@ public static class TripCommands
             {
                 var order = orderService.GetById(stop.OrderId);
                 var location = stop.Type == StopType.Pickup ? order?.Origin.FullAddress : order?.Destination.FullAddress;
-                
+
                 Console.WriteLine($"  [{i}] {stop.Type,-8} | {location} (order {stop.OrderId}) | customer: {order?.CustomerId?.ToString() ?? "-"}");
             }
         });

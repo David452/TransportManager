@@ -21,13 +21,13 @@ public static class OrderServiceCommands
     private static Command AddOrder(OrderService service, IGeocodingService geocoding)
     {
         var command = new Command("add", "Add a new order");
-        var originOption      = command.AddRequiredOption<string>("--origin", "-o");
+        var originOption = command.AddRequiredOption<string>("--origin", "-o");
         var destinationOption = command.AddRequiredOption<string>("--destination", "-d");
-        var noteOption        = command.AddOption<string>("--note", "-n");
+        var noteOption = command.AddOption<string>("--note", "-n");
 
         command.SetAction(async parseResult =>
         {
-            var origin      = await geocoding.GeocodeAsync(parseResult.GetRequiredValue(originOption));
+            var origin = await geocoding.GeocodeAsync(parseResult.GetRequiredValue(originOption));
             var destination = await geocoding.GeocodeAsync(parseResult.GetRequiredValue(destinationOption));
 
             if (origin is null || destination is null)
@@ -106,11 +106,11 @@ public static class OrderServiceCommands
     private static Command UpdateOrder(OrderService service, IGeocodingService geocoding)
     {
         var command = new Command("update", "Update an order");
-        var idArg             = command.AddArgument<Guid>("id");
-        var originOption      = command.AddOption<string>("--origin", "-o");
+        var idArg = command.AddArgument<Guid>("id");
+        var originOption = command.AddOption<string>("--origin", "-o");
         var destinationOption = command.AddOption<string>("--destination", "-d");
-        var statusOption      = command.AddOption<OrderStatus?>("--status", "-s");
-        var noteOption        = command.AddOption<string>("--note", "-n");
+        var statusOption = command.AddOption<OrderStatus?>("--status", "-s");
+        var noteOption = command.AddOption<string>("--note", "-n");
 
         command.SetAction(async parseResult =>
         {
@@ -122,7 +122,7 @@ public static class OrderServiceCommands
                 return;
             }
 
-            var originQuery      = parseResult.GetValue(originOption);
+            var originQuery = parseResult.GetValue(originOption);
             var destinationQuery = parseResult.GetValue(destinationOption);
 
             if (originQuery is not null)
@@ -139,7 +139,7 @@ public static class OrderServiceCommands
             }
 
             order.Status = parseResult.GetValue(statusOption) ?? order.Status;
-            order.Note   = parseResult.GetValue(noteOption)   ?? order.Note;
+            order.Note = parseResult.GetValue(noteOption) ?? order.Note;
 
             await service.UpdateAsync(order.Id, o =>
             {

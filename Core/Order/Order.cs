@@ -18,7 +18,7 @@ public class Order(GeoLocation origin, GeoLocation destination, string? note = n
     public Guid Id { get; init; } = Guid.NewGuid();
     public GeoLocation Origin { get; set; } = origin;
     public GeoLocation Destination { get; set; } = destination;
-    
+
     public OrderStatus Status { get; set; } = OrderStatus.New;
     public string? Note { get; set; } = note;
     public double WeightTons { get; set; } = 0.1;

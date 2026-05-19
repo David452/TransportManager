@@ -10,13 +10,13 @@ public class Customer : IIdentifiable
     public required string LastName { get; set; }
     public string? Email { get; set; }
     public required string PhoneNumber { get; set; }
-    
+
     public string? CompanyName { get; set; }
     public string? Ico { get; set; }
     public string? Dic { get; set; }
-    
+
     public GeoLocation? DefaultPickupLocation { get; set; }
     public GeoLocation? DefaultDeliveryLocation { get; set; }
-    
-    public string FullName =>  $"{FirstName} {LastName}";
+
+    public string FullName => $"{FirstName} {LastName}";
 }

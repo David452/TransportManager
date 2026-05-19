@@ -19,26 +19,26 @@ public static class CustomerServiceCommands
 
     private static Command AddCustomer(CustomerService service)
     {
-        var command     = new Command("add", "Add a new customer");
-        var firstNameOption  = command.AddRequiredOption<string>("--first-name", "-f");
-        var lastNameOption   = command.AddRequiredOption<string>("--last-name", "-l");
-        var phoneOption      = command.AddRequiredOption<string>("--phone", "-p");
-        var emailOption      = command.AddOption<string>("--email", "-e");
-        var companyOption    = command.AddOption<string>("--company-name", "-c");
-        var icoOption        = command.AddOption<string>("--ico", "-i");
-        var dicOption        = command.AddOption<string>("--dic", "-d");
+        var command = new Command("add", "Add a new customer");
+        var firstNameOption = command.AddRequiredOption<string>("--first-name", "-f");
+        var lastNameOption = command.AddRequiredOption<string>("--last-name", "-l");
+        var phoneOption = command.AddRequiredOption<string>("--phone", "-p");
+        var emailOption = command.AddOption<string>("--email", "-e");
+        var companyOption = command.AddOption<string>("--company-name", "-c");
+        var icoOption = command.AddOption<string>("--ico", "-i");
+        var dicOption = command.AddOption<string>("--dic", "-d");
 
         command.SetAction(async parseResult =>
         {
             var customer = new Customer
             {
-                FirstName   = parseResult.GetRequiredValue(firstNameOption),
-                LastName    = parseResult.GetRequiredValue(lastNameOption),
+                FirstName = parseResult.GetRequiredValue(firstNameOption),
+                LastName = parseResult.GetRequiredValue(lastNameOption),
                 PhoneNumber = parseResult.GetRequiredValue(phoneOption),
-                Email       = parseResult.GetValue(emailOption),
+                Email = parseResult.GetValue(emailOption),
                 CompanyName = parseResult.GetValue(companyOption),
-                Ico         = parseResult.GetValue(icoOption),
-                Dic         = parseResult.GetValue(dicOption),
+                Ico = parseResult.GetValue(icoOption),
+                Dic = parseResult.GetValue(dicOption),
             };
             await service.AddAsync(customer);
             Console.WriteLine("Customer successfully added.");
@@ -83,15 +83,15 @@ public static class CustomerServiceCommands
 
     private static Command UpdateCustomer(CustomerService service)
     {
-        var command          = new Command("update", "Update a customer");
-        var idArg            = command.AddArgument<Guid>("id");
-        var firstNameOption  = command.AddOption<string>("--first-name", "-f");
-        var lastNameOption   = command.AddOption<string>("--last-name", "-l");
-        var phoneOption      = command.AddOption<string>("--phone", "-p");
-        var emailOption      = command.AddOption<string>("--email", "-e");
-        var companyOption    = command.AddOption<string>("--company-name", "-c");
-        var icoOption        = command.AddOption<string>("--ico", "-i");
-        var dicOption        = command.AddOption<string>("--dic", "-d");
+        var command = new Command("update", "Update a customer");
+        var idArg = command.AddArgument<Guid>("id");
+        var firstNameOption = command.AddOption<string>("--first-name", "-f");
+        var lastNameOption = command.AddOption<string>("--last-name", "-l");
+        var phoneOption = command.AddOption<string>("--phone", "-p");
+        var emailOption = command.AddOption<string>("--email", "-e");
+        var companyOption = command.AddOption<string>("--company-name", "-c");
+        var icoOption = command.AddOption<string>("--ico", "-i");
+        var dicOption = command.AddOption<string>("--dic", "-d");
 
         command.SetAction(async parseResult =>
         {
@@ -103,23 +103,23 @@ public static class CustomerServiceCommands
                 return;
             }
 
-            customer.FirstName   = parseResult.GetValue(firstNameOption)  ?? customer.FirstName;
-            customer.LastName    = parseResult.GetValue(lastNameOption)    ?? customer.LastName;
-            customer.PhoneNumber = parseResult.GetValue(phoneOption)       ?? customer.PhoneNumber;
-            customer.Email       = parseResult.GetValue(emailOption)       ?? customer.Email;
-            customer.CompanyName = parseResult.GetValue(companyOption)     ?? customer.CompanyName;
-            customer.Ico         = parseResult.GetValue(icoOption)         ?? customer.Ico;
-            customer.Dic         = parseResult.GetValue(dicOption)         ?? customer.Dic;
+            customer.FirstName = parseResult.GetValue(firstNameOption) ?? customer.FirstName;
+            customer.LastName = parseResult.GetValue(lastNameOption) ?? customer.LastName;
+            customer.PhoneNumber = parseResult.GetValue(phoneOption) ?? customer.PhoneNumber;
+            customer.Email = parseResult.GetValue(emailOption) ?? customer.Email;
+            customer.CompanyName = parseResult.GetValue(companyOption) ?? customer.CompanyName;
+            customer.Ico = parseResult.GetValue(icoOption) ?? customer.Ico;
+            customer.Dic = parseResult.GetValue(dicOption) ?? customer.Dic;
 
             await service.UpdateAsync(customer.Id, c =>
             {
-                c.FirstName   = customer.FirstName;
-                c.LastName    = customer.LastName;
+                c.FirstName = customer.FirstName;
+                c.LastName = customer.LastName;
                 c.PhoneNumber = customer.PhoneNumber;
-                c.Email       = customer.Email;
+                c.Email = customer.Email;
                 c.CompanyName = customer.CompanyName;
-                c.Ico         = customer.Ico;
-                c.Dic         = customer.Dic;
+                c.Ico = customer.Ico;
+                c.Dic = customer.Dic;
             });
         });
         return command;

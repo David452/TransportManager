@@ -59,7 +59,7 @@ public class NominatimGeocodingService : IGeocodingService
 internal class NominatimResult(string lat, string lon)
 {
     [JsonPropertyName("lat")]
-    public required string Lat  { get; init; } = lat;
+    public required string Lat { get; init; } = lat;
 
     [JsonPropertyName("lon")]
     public required string Lon { get; init; } = lon;

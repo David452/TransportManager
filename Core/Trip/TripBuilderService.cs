@@ -28,7 +28,7 @@ public class TripBuilderService(IRouteService routeService)
         {
             AddOrder(order);
         }
-        
+
     }
 
     public void RemoveOrder(Guid orderId)
@@ -47,11 +47,11 @@ public class TripBuilderService(IRouteService routeService)
         foreach (var stop in _stops)
         {
             var order = _orders[stop.OrderId];
-            locations.Add(stop.Type == StopType.Pickup? order.Origin : order.Destination);
+            locations.Add(stop.Type == StopType.Pickup ? order.Origin : order.Destination);
         }
 
         candidates = candidates.Where(o => o.Status == OrderStatus.New); // filtrovanie (mozu iba nove objednavky)
-        
+
         var route = await routeService.GetRouteAsync(locations);
         var decodedPolyline = PolylineDecoder.Decode(route.EncodedPolyline);
 
@@ -64,7 +64,7 @@ public class TripBuilderService(IRouteService routeService)
                 suggestions.Add(new OrderSuggestion(candidate, distanceKm));
             }
         }
-        
+
         return suggestions.OrderBy(s => s.DistanceFromRouteKm);
     }
 
@@ -72,5 +72,5 @@ public class TripBuilderService(IRouteService routeService)
     {
         return new Trip(departureDate, _stops);
     }
-    
+
 }

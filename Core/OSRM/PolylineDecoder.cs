@@ -17,7 +17,7 @@ public static class PolylineDecoder
         {
             lat += DecodeNextValue(polyline, ref index);
             lon += DecodeNextValue(polyline, ref index);
-            
+
             points.Add((lat / 1e5, lon / 1e5));
         }
 

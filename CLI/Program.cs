@@ -9,15 +9,15 @@ using Core.Trip;
 
 var httpClient = new HttpClient();
 
-var orderStorage    = new JsonDataStorage<Order>("./data/orders.json");
-var tripStorage     = new JsonDataStorage<Trip>("./data/trips.json");
+var orderStorage = new JsonDataStorage<Order>("./data/orders.json");
+var tripStorage = new JsonDataStorage<Trip>("./data/trips.json");
 var customerStorage = new JsonDataStorage<Customer>("./data/customers.json");
 
 var geocodingService = new NominatimGeocodingService(httpClient);
 var routeService = new OsrmRouteService(httpClient);
 
-var orderService    = new OrderService(orderStorage);
-var tripService     = new TripService(tripStorage);
+var orderService = new OrderService(orderStorage);
+var tripService = new TripService(tripStorage);
 var customerService = new CustomerService(customerStorage);
 
 await orderService.LoadAsync();
