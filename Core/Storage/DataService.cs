@@ -4,16 +4,33 @@ public abstract class DataService<T>(IDataStorage<T> dataStorage)
 where T : IIdentifiable
 {
     protected List<T> Items = [];
+    private readonly SemaphoreSlim _lock = new(1, 1);
 
     public async Task LoadAsync()
     {
-        Items = (await dataStorage.LoadAsync()).ToList();
+        await _lock.WaitAsync();
+        try
+        {
+            Items = (await dataStorage.LoadAsync()).ToList();
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public async Task AddAsync(T item)
     {
-        Items.Add(item);
-        await dataStorage.SaveAsync(Items);
+        await _lock.WaitAsync();
+        try
+        {
+            Items.Add(item);
+            await dataStorage.SaveAsync(Items);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public List<T> GetAll()
@@ -28,17 +45,32 @@ where T : IIdentifiable
 
     public async Task DeleteAsync(Guid id)
     {
-        var item = GetOrExcept(id);
-
-        Items.Remove(item);
-        await dataStorage.SaveAsync(Items);
+        await _lock.WaitAsync();
+        try
+        {
+            var item = GetOrExcept(id);
+            Items.Remove(item);
+            await dataStorage.SaveAsync(Items);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public async Task UpdateAsync(Guid id, Action<T> update)
     {
-        var item = GetOrExcept(id);
-        update(item);
-        await dataStorage.SaveAsync(Items);
+        await _lock.WaitAsync();
+        try
+        {
+            var item = GetOrExcept(id);
+            update(item);
+            await dataStorage.SaveAsync(Items);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     private T GetOrExcept(Guid id)
