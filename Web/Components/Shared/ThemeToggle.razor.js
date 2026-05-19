@@ -1,3 +1,6 @@
+/*
+ AI dopomohlo ku konzistencii stavu napriec aplikacii pomocou localStorage
+ */
 export function toggle() {
     const html = document.documentElement;
     const isDark = html.getAttribute('data-theme') === 'dark';

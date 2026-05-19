@@ -2,6 +2,8 @@ using System.Text.Json;
 
 namespace Core.Storage;
 
+// Využitie generatívnej AI: synchronizácia súbežných čítaní/zápisov do JSON
+// súboru pomocou SemaphoreSlim (prevencia race condition pri Save/Load).
 public class JsonDataStorage<T> : IDataStorage<T>
 {
     private readonly string _path;

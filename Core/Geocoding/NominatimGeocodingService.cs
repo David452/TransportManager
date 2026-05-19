@@ -4,10 +4,9 @@ using System.Text.Json.Serialization;
 
 namespace Core.Geocoding;
 
-/**
- * Zadarmo API je obmedzene na 1 req/s
- * Pretvára query (string) na GeoLocation pomocou externeho API
- */
+// Pretvára query (string) na GeoLocation pomocou externého API.
+// Free Nominatim API je obmedzené na 1 request/sekundu.
+// Využitie generatívnej AI: throttling cez SemaphoreSlim + časovač posledného requestu.
 public class NominatimGeocodingService : IGeocodingService
 {
     private readonly HttpClient _httpClient;

@@ -1,11 +1,10 @@
 ﻿namespace Core.OSRM;
 
+// Dekóduje encoded polyline (string) do zoznamu (lat, lon) bodov.
+// Referencia algoritmu: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
+// Využitie generatívnej AI: implementácia dekódovacej slučky (bitový posun, zig-zag dekódovanie).
 public static class PolylineDecoder
 {
-    /**
-     * Referencia algoritmu: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
-     * Slúži na dekódovanie polyline (string) do listu
-     */
     public static IReadOnlyList<(double Lat, double Lon)> Decode(string polyline)
     {
         var points = new List<(double Latitude, double Longitude)>();

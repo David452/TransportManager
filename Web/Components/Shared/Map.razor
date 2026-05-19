@@ -4,6 +4,8 @@
 <div id="@_mapId" style="height: @Height; width: 100%; border-radius: 0.5rem;"></div>
 
 @code {
+    // Využitie generatívnej AI: návrh JS interop vrstvy (initMap/showRoute/disposeMap)
+    // a ošetrenie výnimiek pri disposingu odpojeného Blazor okruhu.
     [Parameter] public string Height { get; set; } = "400px";
     [Parameter] public bool Interactive { get; set; } = true;
 

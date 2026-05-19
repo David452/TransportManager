@@ -1,3 +1,7 @@
+
+/*
+Ai Pouzite na dispose a Mutation observer
+ */
 window.mapInstances = {};
 window.tileLayers = {};
 

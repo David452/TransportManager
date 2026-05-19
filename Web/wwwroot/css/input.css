@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./theme.css";
+/* AI bolo pouzite na vygenerovanie theme a input na zaklade https://claude.ai/design */
 
 /* Scan Razor components for utility classes */
 @source "../../**/*.razor";

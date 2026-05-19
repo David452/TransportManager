@@ -1,5 +1,7 @@
 namespace Core.Storage;
 
+// Využitie generatívnej AI: ochrana in-memory kolekcie Items a perzistencie
+// pomocou SemaphoreSlim, aby súbežné Add/Update/Delete operácie nepoškodili stav.
 public abstract class DataService<T>(IDataStorage<T> dataStorage)
 where T : IIdentifiable
 {
