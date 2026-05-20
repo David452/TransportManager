@@ -54,7 +54,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public Trip Trip { get; set; } = null!;
+    [Parameter] public Trip Trip { get; set; } = null!;
     [Parameter] public EventCallback OnDeleted { get; set; }
 
     private Map? _map;

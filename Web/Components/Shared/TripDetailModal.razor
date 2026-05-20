@@ -148,8 +148,8 @@
 }
 
 @code {
-    [Parameter, EditorRequired] public bool Visible { get; set; }
-    [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public Trip? Trip { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
     [Parameter] public EventCallback OnDeleted { get; set; }
