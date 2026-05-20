@@ -209,7 +209,11 @@
         Close();
     }
 
-    private void OpenInPlanner() => NavManager.NavigateTo("/");
+    private void OpenInPlanner()
+    {
+        if (Trip is null) return;
+        NavManager.NavigateTo($"/?trip={Trip.Id}");
+    }
 
     private void Close()
     {

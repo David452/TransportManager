@@ -21,13 +21,13 @@
         }
     }
 
-    public async Task ShowRoute(double[] originCords, double[] destinationCords,
-        string originLabel, string destinationLabel,
-        IEnumerable<double[]> polylinePoints)
+    public async Task ShowRoute(IEnumerable<double[]> polylinePoints, IEnumerable<MapMarker> markers)
     {
         if (!_initialized) return;
-        await JS.InvokeVoidAsync("showRoute", _mapId, polylinePoints, originLabel, destinationLabel);
+        await JS.InvokeVoidAsync("showRoute", _mapId, polylinePoints, markers);
     }
+
+    public record MapMarker(double[] Coords, string Label);
 
     public async ValueTask DisposeAsync()
     {

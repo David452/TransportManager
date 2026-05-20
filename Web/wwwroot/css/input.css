@@ -6,6 +6,10 @@
 @source "../../**/*.razor";
 @source "../../**/*.html";
 
+/* Safelist — Badge.razor skladá tieto triedy dynamicky, scanner ich nevidí */
+@source inline("{text-,bg-}state-{new,scheduled,ontrip,delivered,cancelled}");
+@source inline("bg-state-{new,scheduled,ontrip,delivered,cancelled}-bg");
+
 /* Dark mode: triggered by data-theme="dark" on <html> or <body> */
 @variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 

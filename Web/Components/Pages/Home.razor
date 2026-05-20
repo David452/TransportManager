@@ -25,10 +25,10 @@
             </div>
         </div>
 
-        <div class="overflow-y-auto flex-1 px-3 pb-3 flex flex-col gap-2">
+        <div class="overflow-y-auto flex-1 min-h-0 px-3 pb-3 flex flex-col gap-2 isolate z-50">
             @foreach (var order in _newOrders)
             {
-                <div class="bg-surface border border-border rounded-xl flex flex-col overflow-hidden">
+                <div class="bg-surface border border-border rounded-xl flex flex-col overflow-hidden flex-shrink-0">
                     <div class="px-3 pt-3 pb-2 flex flex-col gap-1.5">
                         <div class="flex items-center justify-between">
                             <Badge Label="nová" HighlightClass="new"/>
@@ -273,10 +273,19 @@
     private List<OrderSuggestion>? _suggestions;
     private bool _loadingSuggestions;
 
+    [SupplyParameterFromQuery(Name = "trip")]
+    public Guid? TripId { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(OrderService.LoadAsync(), CustomerService.LoadAsync(), TripService.LoadAsync());
         _newOrders = OrderService.GetByStatus(OrderStatus.New);
+
+        if (TripId is not null)
+        {
+            var trip = TripService.GetById(TripId.Value);
+            if (trip is not null) _currentTrip = trip;
+        }
     }
 
     private string GetCustomerName(Guid? customerId)
@@ -343,7 +352,20 @@
     private async Task SaveTrip()
     {
         if (_currentTrip.Stops.Count == 0) return;
-        await TripService.AddAsync(_currentTrip);
+
+        if (TripService.GetById(_currentTrip.Id) is not null)
+        {
+            var stops = _currentTrip.Stops.ToList();
+            await TripService.UpdateAsync(_currentTrip.Id, t =>
+            {
+                t.Stops.Clear();
+                t.Stops.AddRange(stops);
+            });
+        }
+        else
+        {
+            await TripService.AddAsync(_currentTrip);
+        }
         _currentTrip = new Trip(DateOnly.FromDateTime(DateTime.Now), []);
         _segmentDistances = [];
         _totalDistanceKm = 0;
@@ -373,13 +395,8 @@
                 .Select(p => new double[] { p.Lat, p.Lon })
                 .ToList();
 
-            await _map.ShowRoute(
-                new[] { locations.First().Latitude, locations.First().Longitude },
-                new[] { locations.Last().Latitude, locations.Last().Longitude },
-                locations.First().DisplayName,
-                locations.Last().DisplayName,
-                points
-            );
+            await _map.ShowRoute(points, locations.Select(l =>
+                new Map.MapMarker(new[] { l.Latitude, l.Longitude }, l.DisplayName)));
         }
         catch { }
     }
@@ -422,6 +439,12 @@
         StateHasChanged();
         await Task.Yield();
 
+        if (_currentTrip.Stops.Count > 0)
+        {
+            await Task.WhenAll(RefreshSegmentDistances(), RefreshMap());
+            return;
+        }
+
         var orders = OrderService.GetAll()
             .Where(o => o.Origin.Latitude != 0 && o.Destination.Latitude != 0)
             .ToList();
@@ -441,13 +464,11 @@
                 .Select(p => new double[] { p.Lat, p.Lon })
                 .ToList();
 
-            await _map!.ShowRoute(
-                new[] { order.Origin.Latitude, order.Origin.Longitude },
-                new[] { order.Destination.Latitude, order.Destination.Longitude },
-                order.Origin.DisplayName,
-                order.Destination.DisplayName,
-                points
-            );
+            await _map!.ShowRoute(points, new[]
+            {
+                new Map.MapMarker(new[] { order.Origin.Latitude, order.Origin.Longitude }, order.Origin.DisplayName),
+                new Map.MapMarker(new[] { order.Destination.Latitude, order.Destination.Longitude }, order.Destination.DisplayName),
+            });
         }
         catch
         {

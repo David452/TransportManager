@@ -30,7 +30,7 @@ window.initMap = (elementId, interactive = true) => {
     window.tileLayers[elementId] = tiles;
 };
 
-window.showRoute = (elementId, polylinePoints, originLabel, destinationLabel) => {
+window.showRoute = (elementId, polylinePoints, markers) => {
     const map = window.mapInstances[elementId];
     if (!map) return;
 
@@ -44,8 +44,9 @@ window.showRoute = (elementId, polylinePoints, originLabel, destinationLabel) =>
 
     const line = L.polyline(polylinePoints, { color: '#3b82f6', weight: 4 }).addTo(map);
 
-    L.marker(polylinePoints[0]).bindPopup(originLabel).addTo(map);
-    L.marker(polylinePoints[polylinePoints.length - 1]).bindPopup(destinationLabel).addTo(map);
+    (markers || []).forEach(m => {
+        L.marker(m.coords).bindPopup(m.label).addTo(map);
+    });
 
     map.fitBounds(line.getBounds(), { padding: [32, 32] });
 };

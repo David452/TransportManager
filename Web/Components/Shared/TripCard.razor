@@ -134,13 +134,8 @@
                 .Select(p => new double[] { p.Lat, p.Lon })
                 .ToList();
 
-            await _map.ShowRoute(
-                new[] { stops.First().Latitude, stops.First().Longitude },
-                new[] { stops.Last().Latitude, stops.Last().Longitude },
-                stops.First().DisplayName,
-                stops.Last().DisplayName,
-                points
-            );
+            await _map.ShowRoute(points, stops.Select(s =>
+                new Map.MapMarker(new[] { s.Latitude, s.Longitude }, s.DisplayName)));
             StateHasChanged();
         }
         catch
