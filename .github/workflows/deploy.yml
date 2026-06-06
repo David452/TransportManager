@@ -1,0 +1,30 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # umožní spustiť deploy manuálne z GitHub UI
+
+# Zabráni súbežným deployom – ak pushneš 2x rýchlo za sebou,
+# rozbehnutý deploy sa zruší a pobeží len ten najnovší.
+concurrency:
+  group: pi-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # Beží na tvojom Raspberry Pi (self-hosted runner s týmito labelmi)
+    runs-on: [self-hosted, linux, ARM64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker compose build
+
+      - name: (Re)start container
+        run: docker compose up -d
+
+      - name: Cleanup old images
+        run: docker image prune -f
