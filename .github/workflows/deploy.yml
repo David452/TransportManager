@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          clean: false   # zachová lokálne netrackované súbory (napr. .env s tajomstvami)
 
       - name: Build image
         run: docker compose build
